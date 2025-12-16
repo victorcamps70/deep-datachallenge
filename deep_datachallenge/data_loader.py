@@ -103,7 +103,7 @@ class DataLoader:
         """
         image, mask = self.load_pair(patch_name, phase=phase)
 
-        if phase == "train":
+        if phase == "train" and mask is not None:
             fig, axes = plt.subplots(1, 2, figsize=(14, 6))
 
             # Afficher l'image
@@ -163,9 +163,13 @@ if __name__ == "__main__":
     image, mask = loader.load_pair(patch_name, phase="train")
 
     print(f"Image shape: {image.shape}")
-    print(f"Mask shape: {mask.shape}")
-    print(f"Image - Min: {image.min()}, Max: {image.max()}, Mean: {image.mean():.2f}")
-    print(f"Mask - Min: {mask.min()}, Max: {mask.max()}, Classes: {np.unique(mask)}")
+    if mask is not None:
+        print(f"Mask shape: {mask.shape}")
+        print(f"Image - Min: {image.min()}, Max: {image.max()}, Mean: {image.mean():.2f}")
+        print(f"Mask - Min: {mask.min()}, Max: {mask.max()}, Classes: {np.unique(mask)}")
+    else:
+        print(f"Image - Min: {image.min()}, Max: {image.max()}, Mean: {image.mean():.2f}")
+        print("Mask: None (test set)")
 
     # Visualiser
     print(f"\nAffichage de l'image et du masque...")
