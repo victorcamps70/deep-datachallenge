@@ -1,0 +1,8 @@
+\babel@toc {french}{}\relax 
+\contentsline {section}{\numberline {1}Introduction}{1}{section.1}%
+\contentsline {subsection}{\numberline {1.1}Contexte}{1}{subsection.1.1}%
+\contentsline {subsection}{\numberline {1.2}Equipe}{1}{subsection.1.2}%
+\contentsline {section}{\numberline {2}Exploration des données}{1}{section.2}%
+\contentsline {section}{\numberline {3}Construction du modèle de référence: benchmark}{1}{section.3}%
+\contentsline {section}{\numberline {4}Premier modèle}{1}{section.4}%
+\contentsline {section}{\numberline {5}Conclusion}{1}{section.5}%

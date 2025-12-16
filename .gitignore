@@ -210,5 +210,7 @@ __marimo__/
 data/
 
 # Rapport folder (except main.pdf)
-Rapport/*
-!Rapport/main.pdf
+# Rapport/*
+# !Rapport/main.pdf
+# je le mets en commentaire pour que tu puisses modifier le rapport, 
+# une fois le rapport terminé, on remet ceci
