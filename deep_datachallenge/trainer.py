@@ -133,6 +133,67 @@ class SegmentationTrainer:
         metrics = tracker.get_metrics()
         return metrics
 
+    def save_checkpoint(self, save_dir, model_name, epoch):
+        """
+        Sauvegarder l'état complet du training (checkpoint)
+
+        Args:
+            save_dir (Path): Répertoire de sauvegarde
+            model_name (str): Nom du modèle
+            epoch (int): Numéro d'époque actuelle
+        """
+        save_dir = Path(save_dir)
+        save_dir.mkdir(parents=True, exist_ok=True)
+
+        checkpoint_path = save_dir / f"{model_name}_checkpoint.pt"
+
+        checkpoint = {
+            "epoch": epoch,
+            "model_state_dict": self.model.state_dict(),
+            "optimizer_state_dict": self.optimizer.state_dict(),
+            "scheduler_state_dict": self.scheduler.state_dict(),
+            "history": self.history,
+            "best_val_iou": self.best_val_iou,
+            "patience_counter": self.patience_counter,
+        }
+
+        torch.save(checkpoint, checkpoint_path)
+        print(f"✓ Checkpoint sauvegardé: {checkpoint_path} (époque {epoch+1})")
+
+    def load_checkpoint(self, save_dir, model_name):
+        """
+        Charger un checkpoint pour reprendre l'entraînement
+
+        Args:
+            save_dir (Path): Répertoire contenant le checkpoint
+            model_name (str): Nom du modèle
+
+        Returns:
+            int: Numéro de l'époque à partir de laquelle reprendre (ou -1 si pas de checkpoint)
+        """
+        save_dir = Path(save_dir)
+        checkpoint_path = save_dir / f"{model_name}_checkpoint.pt"
+
+        if not checkpoint_path.exists():
+            print(f"Aucun checkpoint trouvé: {checkpoint_path}")
+            return -1
+
+        checkpoint = torch.load(checkpoint_path, map_location=self.device)
+
+        self.model.load_state_dict(checkpoint["model_state_dict"])
+        self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+        self.scheduler.load_state_dict(checkpoint["scheduler_state_dict"])
+        self.history = checkpoint["history"]
+        self.best_val_iou = checkpoint["best_val_iou"]
+        self.patience_counter = checkpoint["patience_counter"]
+
+        epoch_start = checkpoint["epoch"]
+        print(f"✓ Checkpoint chargé: {checkpoint_path}")
+        print(f"  Reprise à partir de l'époque {epoch_start + 1}")
+        print(f"  Meilleur IoU actuel: {self.best_val_iou:.4f}")
+
+        return epoch_start
+
     def fit(
         self,
         train_loader,
@@ -141,6 +202,7 @@ class SegmentationTrainer:
         early_stopping_patience=10,
         save_dir=None,
         model_name="model",
+        resume=False,
     ):
         """
         Entraîner le modèle pour plusieurs époque avec early stopping
@@ -152,6 +214,7 @@ class SegmentationTrainer:
             early_stopping_patience (int): Nombre d'époque sans amélioration avant stop
             save_dir (Path): Répertoire pour sauvegarder le modèle
             model_name (str): Nom du modèle pour la sauvegarde
+            resume (bool): Si True, reprendre depuis un checkpoint existant
 
         Returns:
             dict: Historique complet de l'entraînement
@@ -161,11 +224,22 @@ class SegmentationTrainer:
             save_dir = Path(save_dir)
             save_dir.mkdir(parents=True, exist_ok=True)
 
+        # Charger un checkpoint si resume=True
+        start_epoch = 0
+        if resume and save_dir:
+            start_epoch = self.load_checkpoint(save_dir, model_name)
+            if start_epoch >= 0:
+                start_epoch += 1  # Reprendre à partir de l'époque suivante
+            else:
+                start_epoch = 0
+
         print("\n" + "=" * 70)
         print(f"ENTRAÎNEMENT DU MODÈLE: {model_name}")
+        if resume and start_epoch > 0:
+            print(f"MODE REPRISE - À partir de l'époque {start_epoch + 1}")
         print("=" * 70)
 
-        for epoch in range(epochs):
+        for epoch in range(start_epoch, epochs):
             print(f"\n[Epoch {epoch+1}/{epochs}]")
 
             # Entraîner
@@ -202,6 +276,10 @@ class SegmentationTrainer:
                         f"\nEarly stopping: pas d'amélioration depuis {early_stopping_patience} époque"
                     )
                     break
+
+            # Sauvegarder un checkpoint tous les 5 epochs pour la reprise
+            if save_dir and (epoch + 1) % 5 == 0:
+                self.save_checkpoint(save_dir, model_name, epoch)
 
             # Mettre à jour le learning rate
             self.scheduler.step()

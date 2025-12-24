@@ -1,11 +1,13 @@
 """
 Script d'entraînement principal pour comparer différents modèles
+Supporte la reprise d'entraînement avec --resume
 """
 
 import torch
 import pandas as pd
 from pathlib import Path
 import json
+import argparse
 
 from deep_datachallenge.models.unet import UNet
 from deep_datachallenge.dataset import create_dataloaders
@@ -23,6 +25,7 @@ def train_model(
     epochs=50,
     lr=1e-3,
     save_dir=None,
+    resume=False,
 ):
     """
     Entraîner un modèle
@@ -36,6 +39,7 @@ def train_model(
         epochs: Nombre d'époque
         lr: Learning rate
         save_dir: Répertoire pour sauvegarder
+        resume (bool): Si True, reprendre depuis un checkpoint
 
     Returns:
         dict: Résultats et historique
@@ -43,6 +47,8 @@ def train_model(
 
     print(f"\n{'='*70}")
     print(f"ENTRAÎNEMENT: {model_name}")
+    if resume:
+        print("MODE: REPRISE D'ENTRAÎNEMENT")
     print(f"{'='*70}")
 
     trainer = SegmentationTrainer(model, device, lr=lr, class_weights=class_weights)
@@ -54,6 +60,7 @@ def train_model(
         early_stopping_patience=10,
         save_dir=save_dir,
         model_name=model_name,
+        resume=resume,
     )
 
     results = {
@@ -72,12 +79,21 @@ def train_model(
 def main():
     """Script principal d'entraînement"""
 
+    # Parser arguments
+    parser = argparse.ArgumentParser(description="Entraîner le modèle U-Net")
+    parser.add_argument("--epochs", type=int, default=50, help="Nombre d'époque (défaut: 50)")
+    parser.add_argument("--batch-size", type=int, default=32, help="Batch size (défaut: 32)")
+    parser.add_argument("--lr", type=float, default=1e-3, help="Learning rate (défaut: 1e-3)")
+    parser.add_argument("--resume", action="store_true", help="Reprendre depuis un checkpoint")
+    args = parser.parse_args()
+
     # Configuration
     DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    BATCH_SIZE = 32
-    EPOCHS = 50
-    LR = 1e-3
+    BATCH_SIZE = args.batch_size
+    EPOCHS = args.epochs
+    LR = args.lr
     SAVE_DIR = Path("checkpoints")
+    RESUME = args.resume
 
     print(f"\n{'='*70}")
     print("CONFIGURATION")
@@ -86,7 +102,8 @@ def main():
     print(f"Batch size: {BATCH_SIZE}")
     print(f"Epochs: {EPOCHS}")
     print(f"Learning rate: {LR}")
-    print(f"Save directory: {SAVE_DIR}\n")
+    print(f"Save directory: {SAVE_DIR}")
+    print(f"Mode: {'REPRISE' if RESUME else 'NOUVEAU'}\n")
 
     # Créer le répertoire de sauvegarde
     SAVE_DIR.mkdir(parents=True, exist_ok=True)
@@ -126,6 +143,7 @@ def main():
         epochs=EPOCHS,
         lr=LR,
         save_dir=SAVE_DIR,
+        resume=RESUME,
     )
 
     # Afficher la comparaison

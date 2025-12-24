@@ -440,3 +440,127 @@ class TestPrediction:
         assert "patch_1" in df.index, "patch_1 manquant"
         assert "patch_2" in df.index, "patch_2 manquant"
         assert "patch_3" in df.index, "patch_3 manquant"
+
+
+class TestCheckpoint:
+    """Tests de la sauvegarde et chargement de checkpoints"""
+
+    @pytest.fixture
+    def device(self):
+        """Device (CPU ou GPU)"""
+        return torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    @pytest.fixture
+    def trainer_with_history(self, device):
+        """Créer un trainer avec un peu d'historique"""
+        from deep_datachallenge.models import UNet
+        from deep_datachallenge.trainer import SegmentationTrainer
+
+        model = UNet(in_channels=1, out_channels=3, depth=4)
+        trainer = SegmentationTrainer(model, device, lr=1e-3)
+
+        # Simuler un peu d'historique
+        trainer.history["train_loss"] = [0.5, 0.4, 0.3]
+        trainer.history["train_iou"] = [0.6, 0.7, 0.75]
+        trainer.history["val_loss"] = [0.55, 0.45, 0.35]
+        trainer.history["val_iou"] = [0.58, 0.68, 0.73]
+        trainer.best_val_iou = 0.73
+        trainer.patience_counter = 2
+
+        return trainer
+
+    def test_save_checkpoint(self, trainer_with_history, tmp_path):
+        """Tester la sauvegarde d'un checkpoint"""
+        checkpoint_path = tmp_path / "test_unet_checkpoint.pt"
+
+        # Sauvegarder le checkpoint
+        trainer_with_history.save_checkpoint(tmp_path, "test_unet", epoch=9)
+
+        # Vérifier que le fichier existe
+        assert checkpoint_path.exists(), "Checkpoint non sauvegardé"
+
+        # Charger et vérifier le contenu
+        checkpoint = torch.load(checkpoint_path)
+
+        assert "epoch" in checkpoint, "Clé 'epoch' manquante"
+        assert "model_state_dict" in checkpoint, "Clé 'model_state_dict' manquante"
+        assert "optimizer_state_dict" in checkpoint, "Clé 'optimizer_state_dict' manquante"
+        assert "scheduler_state_dict" in checkpoint, "Clé 'scheduler_state_dict' manquante"
+        assert "history" in checkpoint, "Clé 'history' manquante"
+        assert "best_val_iou" in checkpoint, "Clé 'best_val_iou' manquante"
+        assert "patience_counter" in checkpoint, "Clé 'patience_counter' manquante"
+
+        # Vérifier les valeurs
+        assert checkpoint["epoch"] == 9, "Numéro d'époque incorrect"
+        assert checkpoint["best_val_iou"] == 0.73, "Best IoU incorrect"
+        assert checkpoint["patience_counter"] == 2, "Patience counter incorrect"
+        assert len(checkpoint["history"]["train_loss"]) == 3, "Historique incorrect"
+
+    def test_load_checkpoint(self, device, tmp_path):
+        """Tester le chargement d'un checkpoint"""
+        from deep_datachallenge.models import UNet
+        from deep_datachallenge.trainer import SegmentationTrainer
+
+        # Créer et sauvegarder un modèle
+        model1 = UNet(in_channels=1, out_channels=3, depth=4)
+        trainer1 = SegmentationTrainer(model1, device, lr=1e-3)
+        trainer1.history["train_loss"] = [0.5, 0.4]
+        trainer1.history["val_iou"] = [0.6, 0.7]
+        trainer1.best_val_iou = 0.75
+        trainer1.patience_counter = 3
+        trainer1.save_checkpoint(tmp_path, "test_model", epoch=4)
+
+        # Créer un nouveau trainer et charger le checkpoint
+        model2 = UNet(in_channels=1, out_channels=3, depth=4)
+        trainer2 = SegmentationTrainer(model2, device, lr=2e-3)  # LR différent intentionnellement
+
+        epoch = trainer2.load_checkpoint(tmp_path, "test_model")
+
+        # Vérifier que l'état a été restauré
+        assert epoch == 4, "Numéro d'époque incorrect"
+        assert trainer2.best_val_iou == 0.75, "Best IoU non restauré"
+        assert trainer2.patience_counter == 3, "Patience counter non restauré"
+        assert trainer2.history["train_loss"] == [0.5, 0.4], "Historique non restauré"
+        assert len(trainer2.history["val_iou"]) == 2, "Val IoU historique non restauré"
+
+    def test_load_checkpoint_not_found(self, device, tmp_path):
+        """Tester le chargement d'un checkpoint inexistant"""
+        from deep_datachallenge.models import UNet
+        from deep_datachallenge.trainer import SegmentationTrainer
+
+        model = UNet(in_channels=1, out_channels=3, depth=4)
+        trainer = SegmentationTrainer(model, device, lr=1e-3)
+
+        # Essayer de charger un checkpoint inexistant
+        epoch = trainer.load_checkpoint(tmp_path, "nonexistent_model")
+
+        # Doit retourner -1
+        assert epoch == -1, "Devrait retourner -1 si checkpoint inexistant"
+
+    def test_checkpoint_restore_optimizer_state(self, device, tmp_path):
+        """Tester que l'état de l'optimizer est correctement restauré"""
+        from deep_datachallenge.models import UNet
+        from deep_datachallenge.trainer import SegmentationTrainer
+
+        # Créer et modifier un optimizer
+        model1 = UNet(in_channels=1, out_channels=3, depth=4)
+        trainer1 = SegmentationTrainer(model1, device, lr=1e-3)
+
+        # Effectuer un pas d'optimisation fictif
+        dummy_loss = model1(torch.randn(2, 1, 160, 160).to(device)).sum()
+        dummy_loss.backward()
+        trainer1.optimizer.step()
+
+        trainer1.save_checkpoint(tmp_path, "test_opt", epoch=0)
+
+        # Créer un nouveau trainer et charger
+        model2 = UNet(in_channels=1, out_channels=3, depth=4)
+        trainer2 = SegmentationTrainer(model2, device, lr=2e-3)
+
+        # L'optimizer lr devrait être 2e-3 avant le chargement
+        assert trainer2.optimizer.param_groups[0]["lr"] == 2e-3
+
+        trainer2.load_checkpoint(tmp_path, "test_opt")
+
+        # Après le chargement, l'optimizer lr devrait être restauré (1e-3)
+        assert trainer2.optimizer.param_groups[0]["lr"] == 1e-3
