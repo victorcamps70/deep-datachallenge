@@ -58,7 +58,10 @@ dev = [
 ]
 
 [tool.setuptools]
-packages = []
+packages = ["deep_datachallenge"]
+
+[tool.setuptools.package-data]
+deep_datachallenge = ["*.py"]
 
 [tool.black]
 line-length = 100
