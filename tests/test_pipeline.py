@@ -305,3 +305,138 @@ class TestTrainer:
         assert "train_loss" in history, "Train loss manquante"
         assert "val_loss" in history, "Val loss manquante"
         assert len(history["train_loss"]) == 1, "Mauvais nombre d'epochs"
+
+
+class TestPrediction:
+    """Tests de la prédiction sur le jeu de test"""
+
+    @pytest.fixture
+    def device(self):
+        """Device (CPU ou GPU)"""
+        return torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    @pytest.fixture
+    def trained_model(self, device):
+        """Charger un modèle entraîné pour les tests"""
+        from deep_datachallenge.models import UNet
+
+        checkpoint_path = Path("checkpoints_test/test_unet_best.pt")
+
+        # Si pas de checkpoint, créer un modèle minimal
+        model = UNet(in_channels=1, out_channels=3, depth=4)
+
+        if checkpoint_path.exists():
+            model.load_state_dict(torch.load(checkpoint_path, map_location=device))
+
+        model = model.to(device)
+        model.eval()
+        return model
+
+    def test_load_test_patch_names(self):
+        """Tester le chargement des noms de patches de test"""
+        x_test_dir = Path("data/x_test_images")
+
+        if not x_test_dir.exists():
+            pytest.skip("Répertoire x_test_images non trouvé")
+
+        # Importer la fonction
+        import sys
+
+        sys.path.insert(0, str(Path(__file__).parent.parent))
+        from predict import load_test_patch_names
+
+        patch_names = load_test_patch_names(x_test_dir)
+
+        assert isinstance(patch_names, list), "patch_names doit être une liste"
+        assert len(patch_names) > 0, "Au moins un patch doit être trouvé"
+
+    def test_predict_single_batch(self, trained_model, device):
+        """Tester une prédiction sur un petit batch"""
+        from deep_datachallenge.preprocessing import ImagePreprocessor
+
+        x_test_dir = Path("data/x_test_images")
+
+        if not x_test_dir.exists():
+            pytest.skip("Répertoire x_test_images non trouvé")
+
+        preprocessor = ImagePreprocessor(target_size=(160, 160))
+
+        # Charger une image de test
+        test_images = sorted(x_test_dir.glob("*.npy"))
+        if len(test_images) == 0:
+            pytest.skip("Pas d'images de test")
+
+        # Charger et prétraiter 2 images
+        images = []
+        for image_path in test_images[:2]:
+            image = np.load(image_path)
+            # Créer un mask fictif (0 partout) pour le preprocessing
+            dummy_mask = np.zeros_like(image)
+            image_processed, _ = preprocessor.full_preprocessing(
+                image, mask=dummy_mask, normalize=True, fill_missing=True
+            )
+            images.append(image_processed)
+
+        images_tensor = torch.from_numpy(np.array(images)).float().unsqueeze(1)
+        images_tensor = images_tensor.to(device)
+
+        # Prédire
+        with torch.no_grad():
+            logits = trained_model(images_tensor)
+            preds = torch.argmax(logits, dim=1)
+
+        # Vérifier shapes
+        assert logits.shape == (2, 3, 160, 160), f"Shape logits incorrecte: {logits.shape}"
+        assert preds.shape == (2, 160, 160), f"Shape preds incorrecte: {preds.shape}"
+
+        # Vérifier que les prédictions sont dans [0, 1, 2]
+        assert torch.all((preds >= 0) & (preds < 3)), "Prédictions en dehors de [0, 2]"
+
+    def test_resize_predictions_opencv(self):
+        """Tester le redimensionnement avec OpenCV"""
+        import cv2
+
+        # Créer une prédiction fictive 160x160
+        pred = np.random.randint(0, 3, (160, 160), dtype=np.uint8)
+
+        # Redimensionner à 160x272 avec OpenCV (comme dans predict.py)
+        pred_resized = cv2.resize(pred, (272, 160), interpolation=cv2.INTER_NEAREST)
+
+        # Vérifier shape
+        assert pred_resized.shape == (160, 272), f"Shape incorrecte: {pred_resized.shape}"
+
+        # Vérifier que les valeurs sont conservées [0, 1, 2]
+        assert np.all((pred_resized >= 0) & (pred_resized < 3)), "Valeurs invalides après resize"
+
+    def test_create_csv_format(self, tmp_path):
+        """Tester la création du CSV y_test"""
+        import sys
+
+        sys.path.insert(0, str(Path(__file__).parent.parent))
+        from predict import create_y_test_csv
+
+        # Créer des prédictions fictives
+        predictions = {
+            "patch_1": np.random.randint(0, 3, 43520),
+            "patch_2": np.random.randint(0, 3, 43520),
+            "patch_3": np.random.randint(0, 3, 43520),
+        }
+
+        output_path = tmp_path / "y_test.csv"
+
+        # Créer le CSV
+        create_y_test_csv(predictions, output_path)
+
+        # Vérifier que le fichier existe
+        assert output_path.exists(), "CSV non créé"
+
+        # Charger et vérifier
+        df = pd.read_csv(output_path, index_col=0)
+
+        assert len(df) == 3, "Mauvais nombre de patches"
+        assert df.shape[1] == 43520, f"Mauvais nombre de colonnes: {df.shape[1]}"
+
+        # Vérifier les index
+        assert "patch_1" in df.index, "patch_1 manquant"
+        assert "patch_2" in df.index, "patch_2 manquant"
+        assert "patch_3" in df.index, "patch_3 manquant"
