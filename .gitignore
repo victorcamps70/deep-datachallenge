@@ -77,6 +77,13 @@ target/
 
 # Jupyter Notebook
 .ipynb_checkpoints
+*.ipynb
+
+# Data and models (too large)
+*.npy
+*.pt
+data/
+checkpoints/
 
 # IPython
 profile_default/
