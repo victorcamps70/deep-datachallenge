@@ -17,7 +17,7 @@ class SegmentationTrainer:
     Trainer générique pour l'entraînement de modèles de segmentation
 
     Avantages:
-    - Réutilisable pour tous les modèles (U-Net, FCN, DeepLabV3+, etc.)
+    - Réutilisable pour tous les modèles (U-Net et ceux qu'on pense faire après)
     - Gestion automatique des poids de classes
     - Logging complet des métriques
     - Early stopping basé sur la métrique de validation
