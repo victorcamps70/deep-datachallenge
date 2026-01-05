@@ -99,6 +99,9 @@ def main():
     print("CONFIGURATION")
     print(f"{'='*70}")
     print(f"Device: {DEVICE}")
+    if torch.cuda.is_available():
+        print(f"GPU: {torch.cuda.get_device_name(0)}")
+        print(f"CUDA Version: {torch.version.cuda}")
     print(f"Batch size: {BATCH_SIZE}")
     print(f"Epochs: {EPOCHS}")
     print(f"Learning rate: {LR}")

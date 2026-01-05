@@ -167,7 +167,12 @@ class TestModels:
         model = model.to(device)
 
         assert model is not None
-        assert next(model.parameters()).device == device
+        # Compare device type and index, not string representation
+        param_device = next(model.parameters()).device
+        assert param_device.type == device.type
+        assert param_device.index == device.index or (
+            param_device.index == 0 and device.index is None
+        )
 
     def test_unet_forward(self, device):
         """Test forward pass U-Net"""
