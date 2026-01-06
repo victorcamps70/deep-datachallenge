@@ -10,6 +10,7 @@ from tqdm import tqdm
 import numpy as np
 
 from deep_datachallenge.metrics import MetricsTracker
+from deep_datachallenge.losses import FocalLoss
 
 
 class SegmentationTrainer:
@@ -24,7 +25,7 @@ class SegmentationTrainer:
     - Sauvegarde du meilleur modèle
     """
 
-    def __init__(self, model, device, lr=1e-3, class_weights=None):
+    def __init__(self, model, device, lr=1e-3, class_weights=None, use_focal_loss=True):
         """
         Initialiser le trainer
 
@@ -33,6 +34,7 @@ class SegmentationTrainer:
             device (torch.device): Device (CPU ou GPU)
             lr (float): Learning rate
             class_weights (torch.Tensor): Poids des classes pour l'équilibrage
+            use_focal_loss (bool): Utiliser Focal Loss au lieu de CrossEntropyLoss
         """
 
         self.model = model.to(device)
@@ -40,10 +42,21 @@ class SegmentationTrainer:
         self.lr = lr
 
         # Loss avec poids pour équilibrer les classes
-        if class_weights is not None:
-            class_weights = class_weights.to(device)
-
-        self.criterion = nn.CrossEntropyLoss(weight=class_weights)
+        if use_focal_loss:
+            # Focal Loss avec alpha weights
+            if class_weights is not None:
+                # Convertir class_weights en alpha weights (normalisés)
+                alpha = class_weights.cpu().numpy().tolist()
+            else:
+                alpha = None
+            
+            # gamma=2.0 est standard, alpha balance les classes
+            self.criterion = FocalLoss(alpha=alpha, gamma=2.0)
+        else:
+            # Fallback: CrossEntropyLoss
+            if class_weights is not None:
+                class_weights = class_weights.to(device)
+            self.criterion = nn.CrossEntropyLoss(weight=class_weights)
 
         # Optimizer
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)

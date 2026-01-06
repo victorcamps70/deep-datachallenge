@@ -26,6 +26,7 @@ def train_model(
     lr=1e-3,
     save_dir=None,
     resume=False,
+    use_focal_loss=True,
 ):
     """
     Entraîner un modèle
@@ -40,6 +41,7 @@ def train_model(
         lr: Learning rate
         save_dir: Répertoire pour sauvegarder
         resume (bool): Si True, reprendre depuis un checkpoint
+        use_focal_loss (bool): Utiliser Focal Loss
 
     Returns:
         dict: Résultats et historique
@@ -49,9 +51,12 @@ def train_model(
     print(f"ENTRAÎNEMENT: {model_name}")
     if resume:
         print("MODE: REPRISE D'ENTRAÎNEMENT")
+    print(f"Loss: {'Focal Loss (gamma=2.0)' if use_focal_loss else 'CrossEntropyLoss'}")
     print(f"{'='*70}")
 
-    trainer = SegmentationTrainer(model, device, lr=lr, class_weights=class_weights)
+    trainer = SegmentationTrainer(
+        model, device, lr=lr, class_weights=class_weights, use_focal_loss=use_focal_loss
+    )
 
     history = trainer.fit(
         train_loader,
@@ -85,6 +90,7 @@ def main():
     parser.add_argument("--batch-size", type=int, default=32, help="Batch size (défaut: 32)")
     parser.add_argument("--lr", type=float, default=1e-3, help="Learning rate (défaut: 1e-3)")
     parser.add_argument("--resume", action="store_true", help="Reprendre depuis un checkpoint")
+    parser.add_argument("--focal", action="store_true", default=True, help="Utiliser Focal Loss (défaut: True)")
     args = parser.parse_args()
 
     # Configuration
@@ -94,6 +100,7 @@ def main():
     LR = args.lr
     SAVE_DIR = Path("checkpoints")
     RESUME = args.resume
+    USE_FOCAL_LOSS = args.focal
 
     print(f"\n{'='*70}")
     print("CONFIGURATION")
@@ -102,6 +109,7 @@ def main():
     print(f"Batch size: {BATCH_SIZE}")
     print(f"Epochs: {EPOCHS}")
     print(f"Learning rate: {LR}")
+    print(f"Loss Function: {'Focal Loss (gamma=2.0)' if USE_FOCAL_LOSS else 'CrossEntropyLoss'}")
     print(f"Save directory: {SAVE_DIR}")
     print(f"Mode: {'REPRISE' if RESUME else 'NOUVEAU'}\n")
 
@@ -144,6 +152,7 @@ def main():
         lr=LR,
         save_dir=SAVE_DIR,
         resume=RESUME,
+        use_focal_loss=USE_FOCAL_LOSS,
     )
 
     # Afficher la comparaison
