@@ -37,12 +37,12 @@ class UNet(nn.Module):
         out_ch = base_channels
 
         for i in range(depth):
-            self.encoders.append(ConvBlock(in_ch, out_ch))
+            self.encoders.append(ConvBlock(in_ch, out_ch, dropout_p=0.0))
             in_ch = out_ch
             out_ch = out_ch * 2
 
         # BOTTLENECK (goulot d'étranglement)
-        self.bottleneck = ConvBlock(in_ch, out_ch)
+        self.bottleneck = ConvBlock(in_ch, out_ch, dropout_p=0.0)
 
         # DECODER (chemin montant)
         self.decoders = nn.ModuleList()
@@ -53,7 +53,7 @@ class UNet(nn.Module):
             out_ch = in_ch // 2
             self.upconvs.append(nn.ConvTranspose2d(in_ch, out_ch, kernel_size=2, stride=2))
             # Les skip connections doublent le nombre de canaux d'entrée
-            self.decoders.append(ConvBlock(in_ch, out_ch))
+            self.decoders.append(ConvBlock(in_ch, out_ch, dropout_p=0.0))
             in_ch = out_ch
 
         # OUTPUT

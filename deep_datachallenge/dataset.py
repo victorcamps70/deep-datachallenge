@@ -8,6 +8,8 @@ from pathlib import Path
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
 
+from deep_datachallenge.augmentations import ElasticDeformation, GaussianNoise
+
 
 class WellSegmentationDataset(Dataset):
     """
@@ -199,8 +201,15 @@ def create_dataloaders(
     if augment_train:
         augment_transform = transforms.Compose(
             [
-                transforms.RandomRotation(degrees=10),
-                transforms.RandomHorizontalFlip(p=0.5),
+                # Transformations géométriques
+                transforms.RandomRotation(degrees=15),  # Rotation jusqu'à 15 degrés
+                transforms.RandomHorizontalFlip(p=0.5),  # Flip horizontal 50%
+                transforms.RandomVerticalFlip(p=0.3),  # Flip vertical 30%
+                # Transformations d'intensité
+                transforms.GaussianBlur(kernel_size=3, sigma=(0.1, 1.0)),  # Léger blur
+                GaussianNoise(std=0.02, p=0.3),  # Bruit Gaussien 30%
+                # Déformation élastique (très utile pour données médicales)
+                ElasticDeformation(alpha=30, sigma=5, p=0.5),  # Déformation 50%
             ]
         )
 
