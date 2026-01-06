@@ -75,10 +75,13 @@ def predict_on_test_set(
                 image_path = x_test_dir / f"{patch_name}.npy"
                 image = np.load(image_path)
 
-                # Prétraiter (pas de mask pour le test)
-                image_processed = preprocessor.full_preprocessing(
-                    image, mask=None, normalize=True, fill_missing=True
-                )
+                # Prétraiter l'image uniquement (pas de mask pour le test)
+                # 1. Redimensionner
+                image_resized = preprocessor.resize_image(image, interpolation=cv2.INTER_LINEAR)
+                # 2. Remplir les NaN si présents
+                image_filled = preprocessor.fill_missing_values(image_resized, fill_value=0)
+                # 3. Normaliser
+                image_processed = preprocessor.normalize_image(image_filled)
 
                 images.append(image_processed)
 
@@ -144,7 +147,7 @@ def main():
     DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     CHECKPOINT_PATH = Path("checkpoints/unet_best.pt")
     X_TEST_DIR = Path("data/x_test_images")
-    OUTPUT_PATH = Path("data/y_test_predictions.csv")
+    OUTPUT_PATH = Path("data/y_test_predictions_with_dropout.csv")
     BATCH_SIZE = 32
 
     print(f"\n{'='*70}")

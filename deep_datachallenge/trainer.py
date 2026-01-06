@@ -251,12 +251,6 @@ class SegmentationTrainer:
             # Afficher les résultats
             print(f"Train Loss: {train_metrics['loss']:.6f} | IoU: {train_metrics['iou_mean']:.4f}")
             print(f"Val Loss:   {val_metrics['loss']:.6f} | IoU: {val_metrics['iou_mean']:.4f}")
-            
-            # Afficher stats GPU si disponible
-            if torch.cuda.is_available():
-                mem_alloc = torch.cuda.memory_allocated() / 1e9
-                mem_reserved = torch.cuda.memory_reserved() / 1e9
-                print(f"GPU Memory: {mem_alloc:.3f}GB / {mem_reserved:.3f}GB")
 
             # Enregistrer dans l'historique
             self.history["train_loss"].append(train_metrics["loss"])
