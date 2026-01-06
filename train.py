@@ -62,7 +62,7 @@ def train_model(
         train_loader,
         val_loader,
         epochs=epochs,
-        early_stopping_patience=10,
+        early_stopping_patience=20,
         save_dir=save_dir,
         model_name=model_name,
         resume=resume,
@@ -90,7 +90,9 @@ def main():
     parser.add_argument("--batch-size", type=int, default=32, help="Batch size (défaut: 32)")
     parser.add_argument("--lr", type=float, default=1e-3, help="Learning rate (défaut: 1e-3)")
     parser.add_argument("--resume", action="store_true", help="Reprendre depuis un checkpoint")
-    parser.add_argument("--focal", action="store_true", default=True, help="Utiliser Focal Loss (défaut: True)")
+    parser.add_argument(
+        "--focal", action="store_true", help="Utiliser Focal Loss (défaut: CrossEntropyLoss)"
+    )
     args = parser.parse_args()
 
     # Configuration
@@ -109,7 +111,9 @@ def main():
     print(f"Batch size: {BATCH_SIZE}")
     print(f"Epochs: {EPOCHS}")
     print(f"Learning rate: {LR}")
-    print(f"Loss Function: {'Focal Loss (gamma=2.0)' if USE_FOCAL_LOSS else 'CrossEntropyLoss'}")
+    print(
+        f"Loss Function: {'Focal Loss (gamma=2.0)' if USE_FOCAL_LOSS else 'CrossEntropyLoss (Baseline)'}"
+    )
     print(f"Save directory: {SAVE_DIR}")
     print(f"Mode: {'REPRISE' if RESUME else 'NOUVEAU'}\n")
 
