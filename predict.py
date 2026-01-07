@@ -147,7 +147,7 @@ def main():
     DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     CHECKPOINT_PATH = Path("checkpoints/unet_best.pt")
     X_TEST_DIR = Path("data/x_test_images")
-    OUTPUT_PATH = Path("data/y_test_predictions_with_focal_loss.csv")
+    OUTPUT_PATH = Path("data/y_test_predictions_with_attention_layer_with_70_epochs.csv")
     BATCH_SIZE = 32
 
     print(f"\n{'='*70}")

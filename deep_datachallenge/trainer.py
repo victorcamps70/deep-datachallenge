@@ -25,7 +25,7 @@ class SegmentationTrainer:
     - Sauvegarde du meilleur modèle
     """
 
-    def __init__(self, model, device, lr=1e-3, class_weights=None, use_focal_loss=True):
+    def __init__(self, model, device, lr=1e-3, class_weights=None, use_focal_loss=False):
         """
         Initialiser le trainer
 
@@ -49,11 +49,11 @@ class SegmentationTrainer:
                 alpha = class_weights.cpu().numpy().tolist()
             else:
                 alpha = None
-            
+
             # gamma=2.0 est standard, alpha balance les classes
             self.criterion = FocalLoss(alpha=alpha, gamma=2.0)
         else:
-            # Fallback: CrossEntropyLoss
+            # CrossEntropyLoss (Baseline)
             if class_weights is not None:
                 class_weights = class_weights.to(device)
             self.criterion = nn.CrossEntropyLoss(weight=class_weights)
