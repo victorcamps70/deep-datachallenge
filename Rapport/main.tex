@@ -1,16 +1,17 @@
 \documentclass[11pt,a4paper,titlepage,french]{article}
 
 \usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
 \usepackage{graphicx}
 \usepackage{fancyhdr}
 \usepackage{geometry}
 \usepackage{afterpage}
-\usepackage{listings}
 \usepackage{amsmath}
 \usepackage{amssymb}
 \usepackage{float}
 \usepackage{stmaryrd}
 \usepackage[french]{babel}
+\usepackage{listings}
 \usepackage[hidelinks]{hyperref}
 \usepackage{tocloft}
 \usepackage{subcaption}
@@ -23,7 +24,7 @@
 % Tout ça pour pouvoir utiliser les euros...
 \usepackage{wasysym}
 \usepackage{newunicodechar}
-\newunicodechar{€}{\euro}
+\ifdefined\euro\else\newunicodechar{€}{\euro}\fi
 
 \newlength{\subfigwidth}
 \setlength{\subfigwidth}{20mm}
@@ -40,7 +41,8 @@
 
 % Configuración de márgenes
 
-\geometry{top=1.7in, bottom=1.1in, left=2.5cm, right=2.5cm, headsep=2.5cm}
+\geometry{top=1.3in, bottom=1.5in, left=2.5cm, right=2.5cm, headsep=1.5cm}
+\setlength{\headheight}{62.80324pt}
 
 % Incluir configuraciones externas
 \input{Configuration/config}
