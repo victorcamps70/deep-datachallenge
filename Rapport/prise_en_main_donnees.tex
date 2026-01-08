@@ -1,1 +1,178 @@
 \section{Exploration des données}
+
+\subsection{Format des données}
+
+Le dataset d'entraînement contient
+\textbf{4410 patches d'images}
+provenant de 4 puits distincts
+(puits 2, 3, 4, 5 et 6). Chaque image
+est représentée sous forme
+vectorisée aplatie contenant
+\textbf{43520 pixels},
+correspondant à des dimensions
+originales de 160×272 pixels.
+Les données d'étiquetage sont des
+classes de segmentation sémantique
+multi-classe :
+\textbf{Background} (classe 0),
+\textbf{Casing} (classe 1) et
+\textbf{TIE} (classe 2).
+
+Cependant, le dataset présente une
+\textbf{hétérogénéité dimensionnelle}
+: certaines images ont des
+dimensions de 160×160 pixels tandis
+que d'autres sont en 160×272 pixels.
+Pour harmoniser le traitement et
+s'adapter aux exigences des
+architectures de réseau de neurones
+convolutifs, une décision de
+\textbf{normalisation spatiale
+    à 160×160 pixels} a été prise.
+Le redimensionnement est effectué
+via la bibliothèque
+\texttt{OpenCV} avec
+interpolation linéaire
+\texttt{INTER\_LINEAR}, offrant un
+excellent compromis entre qualité
+et performance computationnelle,
+et améliorant la précision offerte par
+l'approche du benchmark.
+
+\subsection{Distribution et déséquilibre des données}
+
+L'analyse du dataset révèle un
+\textbf{déséquilibre significatif}
+selon deux dimensions critiques pour
+l'entraînement des modèles.
+
+\textbf{Déséquilibre par puits :}
+La répartition des patches n'est pas
+uniforme entre les puits. Les
+puits 2 et 6 contiennent
+respectivement environ 1600 et
+1500 patches, tandis que le puits 4
+en contient environ 600, et le puits 5
+seulement 300. Cela représente un
+\textbf{ratio déséquilibré de 1{:}5}
+entre le puits le moins et le plus
+représenté. Ce déséquilibre peut
+introduire un biais dans l'entraînement,
+où les caractéristiques géologiques
+spécifiques aux puits surreprésentés
+seraient surpondérées au détriment des
+autres.
+
+\textbf{Déséquilibre par classe :}
+Le problème est encore plus prononcé
+au niveau des classes de segmentation.
+L'analyse des pixels révèle une distribution
+fortement imbalancée : la classe
+\textbf{Background} représente environ
+\textbf{85\%} des pixels totaux,
+tandis que \textbf{Casing} en représente
+9\% et \textbf{TIE} seulement
+\textbf{6\%}.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.7\textwidth]{Configuration/distribution_classes.png}
+    \caption{Distribution des classes dans le dataset}
+    \label{fig:class_distribution}
+\end{figure}
+
+Ce déséquilibre extrême
+(ratio d'environ 15{:}1 entre les classes majoritaires
+et minoritaires) pose un défi majeur pour
+l'apprentissage supervisé : un modèle
+naïf pourrait atteindre 85\% de précision
+en prédisant Background sur tous les pixels,
+sans capturer les structures d'intérêt.
+
+Ces observations justifient l'implémentation
+de \textbf{techniques de correction du
+    déséquilibre} : l'application de
+\textbf{poids de classe} (class weights)
+pour pénaliser davantage les erreurs sur
+les classes minoritaires, l'utilisation
+de \textbf{data augmentation} pour augmenter
+virtuellement la diversité des données,
+et l'adoption de fonctions de perte
+spécialisées comme \textbf{Focal Loss}
+qui amplifient l'apprentissage sur les
+échantillons difficiles.
+
+\subsection{Pipeline de prétraitement
+    et justification des techniques}
+
+Le pipeline de prétraitement implémenté
+suit quatre étapes essentielles pour préparer
+les données brutes à l'entraînement
+des réseaux de neurones.
+
+\textbf{Redimensionnement spatial :}
+Toutes les images sont redimensionnées
+à la dimension uniforme de 160×160 pixels
+via \texttt{OpenCV} avec interpolation linéaire.
+Cette étape est cruciale car les architectures
+CNN exigent des dimensions d'entrée fixes
+et les images carrées offrent une symétrie
+géométrique bénéfique pour l'extraction
+de features.
+
+Le choix de la méthode d'interpolation est
+\textbf{critique et différencié selon le type
+    de données}. Pour les \textbf{images d'intensité},
+on utilise l'interpolation \texttt{INTER\_LINEAR
+    (bilinéaire)}, qui interpole les valeurs
+intermédiaires entre pixels pour créer des
+transitions lisses. Cette approche préserve
+les détails fins du contenu informatif et
+produit une image de meilleure qualité pour
+l'apprentissage du réseau. En revanche, pour
+les \textbf{masques de segmentation} contenant
+des classes discrètes (0, 1, 2), on utilise
+l'interpolation \texttt{INTER\_NEAREST (plus
+    proche voisin)}, qui garantit que chaque pixel
+redimensionné reste une classe valide. Utiliser
+\texttt{INTER\_LINEAR} sur les masques créerait des
+valeurs fractionnaires invalides (0.5, 1.3, etc.),
+corrompant les étiquettes. Cette distinction
+méthodologique assure une cohérence sémantique :
+les images conservent leurs variations d'intensité
+lisses tandis que les labels de classe demeurent
+\textbf{entiers et valides} après redimensionnement.
+
+\textbf{Gestion des valeurs manquantes :}
+Lors du redimensionnement, certaines
+opérations d'interpolation peuvent générer
+des valeurs NaN. Ces valeurs sont
+détectées et remplacées par 0
+(correspondant à des intensités nulles)
+pour assurer l'intégrité des données sans
+perturber significativement le contenu
+informatif des images.
+
+\textbf{Normalisation min-max :} Les
+intensités de pixels, initialement dans
+leur plage brute, sont normalisées à
+l'intervalle [0, 1] selon la formule
+$\tilde{x} = \frac{x - x_{min}}{x_{max} - x_{min}}$.
+Cette normalisation est
+\textbf{critique pour la convergence numérique}
+des réseaux de neurones :
+elle assure que les gradients
+restent dans des plages numériquement
+stables et que l'initialisation des
+poids est appropriée aux magnitudes
+d'entrée.
+
+Voici un exemple illustré :
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.95\textwidth]{Configuration/exemple_pipeline_complet_preprocessing.png}
+    \caption{Pipeline complet de prétraitement : Original $\rightarrow$ Redimensionné $\rightarrow$ Normalisé}
+    \label{fig:preprocessing_pipeline}
+\end{figure}
+
