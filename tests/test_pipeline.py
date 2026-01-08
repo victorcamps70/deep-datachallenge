@@ -196,6 +196,93 @@ class TestModels:
         # Devrait être entre 1M et 5M
         assert 1_000_000 < params < 50_000_000, f"Nombre de params étrange: {params:,}"
 
+    def test_unet_pretrained_creation(self, device):
+        """Créer un U-Net avec encodeur pré-entraîné"""
+        from deep_datachallenge.models.unet_pretrained import create_unet_pretrained
+
+        model = create_unet_pretrained(encoder_name="resnet34", encoder_weights="imagenet")
+        model = model.to(device)
+
+        assert model is not None
+        # Vérifier que le modèle a un encodeur
+        assert hasattr(model, "encoder"), "Modèle sans attribut encoder"
+
+    def test_unet_pretrained_forward(self, device):
+        """Test forward pass U-Net pré-entraîné"""
+        from deep_datachallenge.models.unet_pretrained import create_unet_pretrained
+
+        model = create_unet_pretrained(encoder_name="resnet34", encoder_weights="imagenet")
+        model = model.to(device)
+
+        dummy_input = torch.randn(2, 1, 160, 160).to(device)
+        output = model(dummy_input)
+
+        assert output.shape == (2, 3, 160, 160), f"Shape output incorrecte: {output.shape}"
+
+    def test_unet_pretrained_params(self, device):
+        """Vérifier le nombre de paramètres U-Net pré-entraîné"""
+        from deep_datachallenge.models.unet_pretrained import create_unet_pretrained
+
+        model = create_unet_pretrained(encoder_name="resnet34", encoder_weights="imagenet")
+        params = sum(p.numel() for p in model.parameters())
+
+        # ResNet34 pré-entraîné doit avoir plus de paramètres que UNet custom
+        # Généralement autour de 25M
+        assert (
+            params > 10_000_000
+        ), f"Nombre de params trop bas pour modèle pré-entraîné: {params:,}"
+
+    def test_unet_pretrained_freeze_encoder(self, device):
+        """Tester la congélation de l'encodeur"""
+        from deep_datachallenge.models.unet_pretrained import (
+            create_unet_pretrained,
+            freeze_encoder,
+            unfreeze_encoder,
+        )
+
+        model = create_unet_pretrained(encoder_name="resnet34", encoder_weights="imagenet")
+        model = model.to(device)
+
+        # Compter les paramètres entraînables avant congélation
+        trainable_before = sum(p.numel() for p in model.parameters() if p.requires_grad)
+
+        # Congeler l'encodeur
+        freeze_encoder(model)
+
+        # Compter après congélation
+        trainable_after = sum(p.numel() for p in model.parameters() if p.requires_grad)
+
+        # Il devrait y avoir moins de paramètres entraînables après
+        assert (
+            trainable_after < trainable_before
+        ), "Congélation n'a pas réduit les params entraînables"
+
+        # Dégeler et vérifier
+        unfreeze_encoder(model)
+
+        trainable_unfrozen = sum(p.numel() for p in model.parameters() if p.requires_grad)
+
+        # Devrait être proche du nombre initial
+        assert (
+            trainable_unfrozen == trainable_before
+        ), "Dégélation n'a pas restauré les params entraînables"
+
+    def test_unet_pretrained_different_encoders(self, device):
+        """Tester différents encodeurs disponibles"""
+        from deep_datachallenge.models.unet_pretrained import create_unet_pretrained
+
+        encoders = ["resnet18", "resnet34", "resnet50"]
+
+        for encoder_name in encoders:
+            model = create_unet_pretrained(encoder_name=encoder_name, encoder_weights="imagenet")
+            model = model.to(device)
+
+            dummy_input = torch.randn(1, 1, 160, 160).to(device)
+            output = model(dummy_input)
+
+            assert output.shape == (1, 3, 160, 160), f"Erreur avec {encoder_name}"
+            print(f"✓ {encoder_name} OK")
+
 
 class TestMetrics:
     """Tests des métriques IoU"""

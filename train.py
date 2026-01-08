@@ -10,6 +10,11 @@ import json
 import argparse
 
 from deep_datachallenge.models.unet import UNet
+from deep_datachallenge.models.unet_pretrained import (
+    create_unet_pretrained,
+    freeze_encoder,
+    unfreeze_encoder,
+)
 from deep_datachallenge.dataset import create_dataloaders
 from deep_datachallenge.preprocessing import ImagePreprocessor
 from deep_datachallenge.trainer import SegmentationTrainer
@@ -93,6 +98,22 @@ def main():
     parser.add_argument(
         "--focal", action="store_true", help="Utiliser Focal Loss (défaut: CrossEntropyLoss)"
     )
+    parser.add_argument(
+        "--pretrained",
+        action="store_true",
+        help="Utiliser UNet avec encodeur ResNet pré-entraîné (défaut: UNet custom)",
+    )
+    parser.add_argument(
+        "--encoder",
+        type=str,
+        default="resnet34",
+        help="Encodeur à utiliser (resnet18, resnet34, resnet50, etc.) si --pretrained",
+    )
+    parser.add_argument(
+        "--freeze-encoder",
+        action="store_true",
+        help="Geler l'encodeur pré-entraîné pendant l'entraînement",
+    )
     args = parser.parse_args()
 
     # Configuration
@@ -103,6 +124,9 @@ def main():
     SAVE_DIR = Path("checkpoints")
     RESUME = args.resume
     USE_FOCAL_LOSS = args.focal
+    USE_PRETRAINED = args.pretrained
+    ENCODER_NAME = args.encoder
+    FREEZE_ENCODER = args.freeze_encoder
 
     print(f"\n{'='*70}")
     print("CONFIGURATION")
@@ -114,6 +138,11 @@ def main():
     print(
         f"Loss Function: {'Focal Loss (gamma=2.0)' if USE_FOCAL_LOSS else 'CrossEntropyLoss (Baseline)'}"
     )
+    if USE_PRETRAINED:
+        print(f"Model: UNet with pretrained {ENCODER_NAME} encoder")
+        print(f"Encoder frozen: {FREEZE_ENCODER}")
+    else:
+        print("Model: Custom UNet (no pretraining)")
     print(f"Save directory: {SAVE_DIR}")
     print(f"Mode: {'REPRISE' if RESUME else 'NOUVEAU'}\n")
 
@@ -143,11 +172,33 @@ def main():
     # Entraîner les modèles
     results = {}
 
-    # Modèle 1: U-Net
-    model_unet = UNet(in_channels=1, out_channels=3, depth=4)
-    results["unet"] = train_model(
-        model_unet,
-        "unet",
+    # Créer le modèle
+    if USE_PRETRAINED:
+        print(f"{'='*70}")
+        print("CRÉATION DU MODÈLE")
+        print(f"{'='*70}")
+        print(f"Téléchargement du modèle pré-entraîné {ENCODER_NAME}...")
+        model = create_unet_pretrained(encoder_name=ENCODER_NAME, encoder_weights="imagenet")
+
+        if FREEZE_ENCODER:
+            freeze_encoder(model)
+
+        model_name = f"unet_pretrained_{ENCODER_NAME}"
+        if FREEZE_ENCODER:
+            model_name += "_frozen"
+    else:
+        print(f"{'='*70}")
+        print("CRÉATION DU MODÈLE")
+        print(f"{'='*70}")
+        model = UNet(in_channels=1, out_channels=3, depth=4)
+        model_name = "unet"
+
+    print(f"✓ Modèle créé\n")
+
+    # Entraîner le modèle
+    results[model_name] = train_model(
+        model,
+        model_name,
         train_loader,
         val_loader,
         class_weights,

@@ -1,5 +1,6 @@
 """
 Script de prédiction : génère y_test.csv à partir du modèle entraîné
+Supporte à la fois UNet baseline et UNet avec encodeur pré-entraîné
 """
 
 import torch
@@ -8,8 +9,10 @@ import numpy as np
 import cv2
 from pathlib import Path
 from tqdm import tqdm
+import argparse
 
 from deep_datachallenge.models import UNet
+from deep_datachallenge.models.unet_pretrained import create_unet_pretrained
 from deep_datachallenge.preprocessing import ImagePreprocessor
 
 
@@ -143,24 +146,69 @@ def create_y_test_csv(predictions, output_path):
 def main():
     """Générer les prédictions et créer y_test.csv"""
 
+    # Parser arguments
+    parser = argparse.ArgumentParser(description="Générer les prédictions sur le jeu de test")
+    parser.add_argument(
+        "--pretrained",
+        action="store_true",
+        help="Utiliser le modèle pré-entraîné (défaut: UNet baseline)",
+    )
+    parser.add_argument(
+        "--encoder",
+        type=str,
+        default="resnet34",
+        help="Encodeur à utiliser (resnet18, resnet34, resnet50, etc.) si --pretrained",
+    )
+    parser.add_argument(
+        "--checkpoint",
+        type=str,
+        default=None,
+        help="Chemin du checkpoint personnalisé (défaut: checkpoints/unet_best.pt ou unet_pretrained_resnet34_best.pt)",
+    )
+    args = parser.parse_args()
+
     # Configuration
     DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    CHECKPOINT_PATH = Path("checkpoints/unet_best.pt")
+    USE_PRETRAINED = args.pretrained
+    ENCODER_NAME = args.encoder
+
+    # Déterminer le chemin du checkpoint
+    if args.checkpoint:
+        CHECKPOINT_PATH = Path(args.checkpoint)
+    else:
+        if USE_PRETRAINED:
+            CHECKPOINT_PATH = Path(f"checkpoints/unet_pretrained_{ENCODER_NAME}_best.pt")
+        else:
+            CHECKPOINT_PATH = Path("checkpoints/unet_best.pt")
+
     X_TEST_DIR = Path("data/x_test_images")
-    OUTPUT_PATH = Path("data/y_test_predictions_with_attention_layer_with_70_epochs.csv")
+
+    if USE_PRETRAINED:
+        OUTPUT_PATH = Path(f"data/y_test_predictions_pretrained_{ENCODER_NAME}.csv")
+    else:
+        OUTPUT_PATH = Path("data/y_test_predictions_unet.csv")
+
     BATCH_SIZE = 32
 
     print(f"\n{'='*70}")
     print("PRÉDICTION SUR LE JEU DE TEST")
     print(f"{'='*70}")
     print(f"Device: {DEVICE}")
+    if USE_PRETRAINED:
+        print(f"Model: UNet with pretrained {ENCODER_NAME} encoder")
+    else:
+        print("Model: Custom UNet (no pretraining)")
     print(f"Checkpoint: {CHECKPOINT_PATH}")
     print(f"Test images: {X_TEST_DIR}")
 
     # Vérifier que le checkpoint existe
     if not CHECKPOINT_PATH.exists():
         print(f"❌ Erreur: {CHECKPOINT_PATH} n'existe pas!")
-        print("   Veuillez d'abord entraîner le modèle avec: python train.py")
+        print("   Veuillez d'abord entraîner le modèle avec:")
+        if USE_PRETRAINED:
+            print(f"   python train.py --pretrained --encoder {ENCODER_NAME} --freeze-encoder")
+        else:
+            print("   python train.py")
         return
 
     # Charger le modèle
@@ -168,8 +216,14 @@ def main():
     print("CHARGEMENT DU MODÈLE")
     print(f"{'='*70}")
 
-    model = UNet(in_channels=1, out_channels=3, depth=4)
-    model.load_state_dict(torch.load(CHECKPOINT_PATH))
+    if USE_PRETRAINED:
+        print(f"Création du modèle pré-entraîné {ENCODER_NAME}...")
+        model = create_unet_pretrained(encoder_name=ENCODER_NAME, encoder_weights="imagenet")
+    else:
+        print("Création du modèle UNet baseline...")
+        model = UNet(in_channels=1, out_channels=3, depth=4)
+
+    model.load_state_dict(torch.load(CHECKPOINT_PATH, map_location=DEVICE))
     model = model.to(DEVICE)
     print(f"✓ Modèle chargé depuis {CHECKPOINT_PATH}")
 
