@@ -11,19 +11,33 @@
 \babel@aux{french}{}
 \@writefile{toc}{\contentsline {section}{\numberline {1}Introduction}{1}{section.1}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {1.1}Contexte}{1}{subsection.1.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {1.2}Equipe}{1}{subsection.1.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {2}Exploration des données}{1}{section.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {2.1}Format des données}{1}{subsection.2.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {2.2}Distribution et déséquilibre des données}{1}{subsection.2.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {1.2}Outils utilisés}{1}{subsection.1.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {1.3}Métrique de performance}{1}{subsection.1.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {2}Exploration des données}{2}{section.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.1}Format des données}{2}{subsection.2.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.2}Distribution et déséquilibre des données}{2}{subsection.2.2}\protected@file@percent }
 \@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Distribution des classes dans le dataset}}{2}{figure.caption.2}\protected@file@percent }
 \providecommand*\caption@xref[2]{\@setref\relax\@undefined{#1}}
 \newlabel{fig:class_distribution}{{1}{2}{Distribution des classes dans le dataset}{figure.caption.2}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {2.3}Pipeline de prétraitement et justification des techniques}{2}{subsection.2.3}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Pipeline complet de prétraitement : Original $\rightarrow $ Redimensionné $\rightarrow $ Normalisé}}{3}{figure.caption.3}\protected@file@percent }
-\newlabel{fig:preprocessing_pipeline}{{2}{3}{Pipeline complet de prétraitement : Original $\rightarrow $ Redimensionné $\rightarrow $ Normalisé}{figure.caption.3}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {3}Construction du modèle de référence: UNet}{3}{section.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Motivations}{3}{subsection.3.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}Architecture générale}{3}{subsection.3.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {4}Premier modèle}{4}{section.4}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {5}Conclusion}{4}{section.5}\protected@file@percent }
-\gdef \@abspage@last{9}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.3}Pipeline de prétraitement et justification des techniques}{3}{subsection.2.3}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Pipeline complet de prétraitement : Original $\rightarrow $ Redimensionné $\rightarrow $ Normalisé}}{4}{figure.caption.3}\protected@file@percent }
+\newlabel{fig:preprocessing_pipeline}{{2}{4}{Pipeline complet de prétraitement : Original $\rightarrow $ Redimensionné $\rightarrow $ Normalisé}{figure.caption.3}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {3}Construction du modèle de référence}{4}{section.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Motivations}{4}{subsection.3.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}Architecture générale}{4}{subsection.3.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.2.1}Structure du projet}{4}{subsubsection.3.2.1}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Pipeline complet : entraînement (gauche) et inférence (droite)}}{5}{figure.caption.4}\protected@file@percent }
+\newlabel{fig:architecture}{{3}{5}{Pipeline complet : entraînement (gauche) et inférence (droite)}{figure.caption.4}{}}
+\@writefile{toc}{\contentsline {paragraph}{Phase d'entraînement (flux vertical, gauche):}{5}{section*.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Phase d'inférence (flux horizontal, droite):}{5}{section*.6}\protected@file@percent }
+\citation{Ronneberger2015}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.2.2}Description des modules}{6}{subsubsection.3.2.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.2.3}Modèle UNet Baseline}{6}{subsubsection.3.2.3}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Dimensions et nombre de filtres à chaque étape du UNet baseline}}{7}{table.caption.7}\protected@file@percent }
+\newlabel{tab:unet_dims}{{1}{7}{Dimensions et nombre de filtres à chaque étape du UNet baseline}{table.caption.7}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.2.4}Modifications ultérieures}{7}{subsubsection.3.2.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Ajout de Dropout :}{7}{section*.8}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Ajout de bruit Gaussien dans l'augmentation :}{8}{section*.9}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {4}Premier modèle}{8}{section.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {5}Conclusion}{8}{section.5}\protected@file@percent }
+\gdef \@abspage@last{13}

@@ -7,6 +7,7 @@ import numpy as np
 from pathlib import Path
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
+from deep_datachallenge.augmentations import GaussianNoise
 
 
 class WellSegmentationDataset(Dataset):
@@ -200,8 +201,10 @@ def create_dataloaders(
         augment_transform = transforms.Compose(
             [
                 # Transformations géométriques
-                transforms.RandomRotation(degrees=10),  # Rotation jusqu'à 15 degrés
-                transforms.RandomHorizontalFlip(p=0.5),  # Flip horizontal 50%
+                transforms.RandomRotation(degrees=15),  # Rotation jusqu'à 15 degrés
+                # transforms.RandomHorizontalFlip(p=0.5),  # Flip horizontal 50%
+                # Augmentation de bruit
+                GaussianNoise(std=0.03, p=0.4),  # Bruit Gaussien 30% du temps
             ]
         )
 
