@@ -1,0 +1,39 @@
+\section{Construction du modèle de référence: UNet}
+
+\subsection{Motivations}
+\subsection{Architecture générale}
+
+\textbf{Data augmentation en
+    entraînement :} Au-delà de ce
+pipeline de base, une \textbf{data
+    augmentation} est appliquée dynamiquement
+durant l'entraînement. Compte tenu du
+déséquilibre observé (seulement 4410
+patches pour un problème complexe de
+segmentation multi-classe), les techniques
+d'augmentation géométrique (rotations,
+flips, décalages) augmentent
+virtuellement la taille effective
+du dataset et améliorent la robustesse
+du modèle face à des variations
+spatiales non vues lors de
+l'entraînement. Cela contribue à
+réduire le surapprentissage et
+améliore la généralisation.
+
+\textbf{Poids de classe (class weights) :}
+Pour contrer le déséquilibre class majeur
+(95\% vs 1\% vs 1\%), des poids de classe
+sont calculés de manière inversement
+proportionnelle à la fréquence de chaque
+classe. Ces poids sont intégrés à la
+fonction de perte (Cross-Entropy Loss
+pondérée) pour que le modèle accorde
+une \textbf{importance disproportionnée}
+aux pixels rares. De cette manière,
+une erreur de segmentation sur la
+classe TIE (minoritaire) pénalise
+davantage le modèle qu'une erreur
+équivalente sur Background (majoritaire)
+, alignant les objectifs d'optimisation
+avec l'importance pratique des classes.
