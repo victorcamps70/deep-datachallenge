@@ -10,7 +10,7 @@ from tqdm import tqdm
 import numpy as np
 
 from deep_datachallenge.metrics import MetricsTracker
-from deep_datachallenge.losses import FocalLoss
+from deep_datachallenge.losses import FocalLoss, DiceLoss, CombinedLoss
 
 
 class SegmentationTrainer:
@@ -25,7 +25,15 @@ class SegmentationTrainer:
     - Sauvegarde du meilleur modèle
     """
 
-    def __init__(self, model, device, lr=1e-3, class_weights=None, use_focal_loss=False):
+    def __init__(
+        self,
+        model,
+        device,
+        lr=1e-3,
+        class_weights=None,
+        loss_type="crossentropy",
+        use_focal_loss=None,
+    ):
         """
         Initialiser le trainer
 
@@ -34,25 +42,40 @@ class SegmentationTrainer:
             device (torch.device): Device (CPU ou GPU)
             lr (float): Learning rate
             class_weights (torch.Tensor): Poids des classes pour l'équilibrage
-            use_focal_loss (bool): Utiliser Focal Loss au lieu de CrossEntropyLoss
+            loss_type (str): Type de loss ('crossentropy', 'focal', 'dice', 'combined')
+            use_focal_loss (bool): (DEPRECATED) Utiliser Focal Loss - utilisez loss_type='focal' à la place
         """
 
         self.model = model.to(device)
         self.device = device
         self.lr = lr
 
-        # Loss avec poids pour équilibrer les classes
-        if use_focal_loss:
+        # Backward compatibility: si use_focal_loss est fourni, l'utiliser
+        if use_focal_loss is not None:
+            loss_type = "focal" if use_focal_loss else "crossentropy"
+
+        # Créer la loss fonction en fonction du type choisi
+        if loss_type == "focal":
             # Focal Loss avec alpha weights
             if class_weights is not None:
-                # Convertir class_weights en alpha weights (normalisés)
                 alpha = class_weights.cpu().numpy().tolist()
             else:
                 alpha = None
-
-            # gamma=2.0 est standard, alpha balance les classes
             self.criterion = FocalLoss(alpha=alpha, gamma=2.0)
-        else:
+
+        elif loss_type == "dice":
+            # Dice Loss seule
+            self.criterion = DiceLoss()
+
+        elif loss_type == "combined":
+            # Combined Loss (CrossEntropy + Dice)
+            self.criterion = CombinedLoss(
+                class_weights=class_weights.to(device) if class_weights is not None else None,
+                ce_weight=1.0,
+                dice_weight=0.5,
+            )
+
+        else:  # crossentropy (défaut)
             # CrossEntropyLoss (Baseline)
             if class_weights is not None:
                 class_weights = class_weights.to(device)

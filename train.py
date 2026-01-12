@@ -18,6 +18,7 @@ from deep_datachallenge.models.unet_pretrained import (
 from deep_datachallenge.dataset import create_dataloaders
 from deep_datachallenge.preprocessing import ImagePreprocessor
 from deep_datachallenge.trainer import SegmentationTrainer
+from deep_datachallenge.losses import FocalLoss, DiceLoss, CombinedLoss
 
 
 def train_model(
@@ -31,7 +32,7 @@ def train_model(
     lr=1e-3,
     save_dir=None,
     resume=False,
-    use_focal_loss=True,
+    loss_type="crossentropy",
 ):
     """
     Entraîner un modèle
@@ -46,7 +47,7 @@ def train_model(
         lr: Learning rate
         save_dir: Répertoire pour sauvegarder
         resume (bool): Si True, reprendre depuis un checkpoint
-        use_focal_loss (bool): Utiliser Focal Loss
+        loss_type (str): Type de loss ('crossentropy', 'focal', 'dice', 'combined')
 
     Returns:
         dict: Résultats et historique
@@ -56,11 +57,17 @@ def train_model(
     print(f"ENTRAÎNEMENT: {model_name}")
     if resume:
         print("MODE: REPRISE D'ENTRAÎNEMENT")
-    print(f"Loss: {'Focal Loss (gamma=2.0)' if use_focal_loss else 'CrossEntropyLoss'}")
+    loss_names = {
+        "crossentropy": "CrossEntropyLoss",
+        "focal": "Focal Loss (gamma=2.0)",
+        "dice": "Dice Loss",
+        "combined": "Combined Loss (CE + Dice)",
+    }
+    print(f"Loss: {loss_names.get(loss_type, 'Unknown')}")
     print(f"{'='*70}")
 
     trainer = SegmentationTrainer(
-        model, device, lr=lr, class_weights=class_weights, use_focal_loss=use_focal_loss
+        model, device, lr=lr, class_weights=class_weights, loss_type=loss_type
     )
 
     history = trainer.fit(
@@ -96,7 +103,16 @@ def main():
     parser.add_argument("--lr", type=float, default=1e-3, help="Learning rate (défaut: 1e-3)")
     parser.add_argument("--resume", action="store_true", help="Reprendre depuis un checkpoint")
     parser.add_argument(
-        "--focal", action="store_true", help="Utiliser Focal Loss (défaut: CrossEntropyLoss)"
+        "--loss",
+        type=str,
+        default="crossentropy",
+        choices=["crossentropy", "focal", "dice", "combined"],
+        help="Type de loss function à utiliser (défaut: crossentropy)",
+    )
+    parser.add_argument(
+        "--focal",
+        action="store_true",
+        help="(DEPRECATED) Utiliser Focal Loss - utilisez --loss focal à la place",
     )
     parser.add_argument(
         "--pretrained",
@@ -123,7 +139,7 @@ def main():
     LR = args.lr
     SAVE_DIR = Path("checkpoints")
     RESUME = args.resume
-    USE_FOCAL_LOSS = args.focal
+    LOSS_TYPE = args.loss if args.loss else ("focal" if args.focal else "crossentropy")
     USE_PRETRAINED = args.pretrained
     ENCODER_NAME = args.encoder
     FREEZE_ENCODER = args.freeze_encoder
@@ -135,9 +151,13 @@ def main():
     print(f"Batch size: {BATCH_SIZE}")
     print(f"Epochs: {EPOCHS}")
     print(f"Learning rate: {LR}")
-    print(
-        f"Loss Function: {'Focal Loss (gamma=2.0)' if USE_FOCAL_LOSS else 'CrossEntropyLoss (Baseline)'}"
-    )
+    loss_names = {
+        "crossentropy": "CrossEntropyLoss (Baseline)",
+        "focal": "Focal Loss (gamma=2.0)",
+        "dice": "Dice Loss",
+        "combined": "Combined Loss (CrossEntropy + Dice)",
+    }
+    print(f"Loss Function: {loss_names.get(LOSS_TYPE, 'Unknown')}")
     if USE_PRETRAINED:
         print(f"Model: UNet with pretrained {ENCODER_NAME} encoder")
         print(f"Encoder frozen: {FREEZE_ENCODER}")
@@ -207,7 +227,7 @@ def main():
         lr=LR,
         save_dir=SAVE_DIR,
         resume=RESUME,
-        use_focal_loss=USE_FOCAL_LOSS,
+        loss_type=LOSS_TYPE,
     )
 
     # Afficher la comparaison
