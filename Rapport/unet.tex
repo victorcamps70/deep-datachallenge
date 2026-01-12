@@ -1,39 +1,285 @@
-\section{Construction du modèle de référence: UNet}
+\section{Construction du modèle de référence}
 
 \subsection{Motivations}
+Nous avons choisi d'utiliser un modèle Unet, c'est-à-dire,
+un encodeur-décodeur à convolution, développé pour la
+segmentation d'images médicales.
+Nous avons eu l'idée en regardant cett vidéo youtube
+\href{https://www.youtube.com/watch?v=FeGb2asAi5U}
+{Deep learning pour la segmentation au cours du temps
+    des images en lumière transmise}
+puis nous avons fait des recherches pour valider que ce
+modèle soit efficace dans ce genre de situations.
+
+Pour les modèles suivants: attention-UNet, pretrained Unet,
+nous nous sommes basés sur cet article
+\href{https://www.sciencedirect.com/science/article/
+    pii/S1746809421006741?casa_token=pAvtdGZ2Pl4AAAAA:
+    MnYH269ziUPV1NjrSiTdefH7E_a4HIE_
+    GFwl2Sf7R97mwB81z9rlBzg6l468vW2XlVpJdRRHxg}
+{Attention Res-UNet with Guided Decoder for semantic
+    segmentation of brain tumors}
+
+
 \subsection{Architecture générale}
 
-\textbf{Data augmentation en
-    entraînement :} Au-delà de ce
-pipeline de base, une \textbf{data
-    augmentation} est appliquée dynamiquement
-durant l'entraînement. Compte tenu du
-déséquilibre observé (seulement 4410
-patches pour un problème complexe de
-segmentation multi-classe), les techniques
-d'augmentation géométrique (rotations,
-flips, décalages) augmentent
-virtuellement la taille effective
-du dataset et améliorent la robustesse
-du modèle face à des variations
-spatiales non vues lors de
-l'entraînement. Cela contribue à
-réduire le surapprentissage et
-améliore la généralisation.
+\subsubsection{Structure du projet}
 
-\textbf{Poids de classe (class weights) :}
-Pour contrer le déséquilibre class majeur
-(95\% vs 1\% vs 1\%), des poids de classe
-sont calculés de manière inversement
-proportionnelle à la fréquence de chaque
-classe. Ces poids sont intégrés à la
-fonction de perte (Cross-Entropy Loss
-pondérée) pour que le modèle accorde
-une \textbf{importance disproportionnée}
-aux pixels rares. De cette manière,
-une erreur de segmentation sur la
-classe TIE (minoritaire) pénalise
-davantage le modèle qu'une erreur
-équivalente sur Background (majoritaire)
-, alignant les objectifs d'optimisation
-avec l'importance pratique des classes.
+Le projet adopte une architecture modulaire organisée en couches fonctionnelles
+distinctes, chacune responsable d'une étape du pipeline de segmentation.
+Cette organisation garantit la maintenabilité et permet de substituer
+facilement des composants sans affecter le reste du système.
+
+\begin{figure}[H]
+    \centering
+    \begin{tikzpicture}[node distance=1.5cm, auto]
+        % Define styles
+        \tikzstyle{block} = [rectangle, draw, fill=blue!20, text width=3.5cm, text centered, rounded corners, minimum height=0.7cm, font=\small]
+        \tikzstyle{data} = [rectangle, draw, fill=green!20, text width=3.5cm, text centered, rounded corners, minimum height=0.7cm, font=\small]
+        \tikzstyle{entry} = [rectangle, draw, fill=orange!20, text width=3.5cm, text centered, rounded corners, minimum height=0.7cm, font=\small]
+        \tikzstyle{arrow} = [thick, ->]
+
+        % TRAINING PIPELINE (Left side)
+        \node (input) [data, text width=3cm] {Images \& Masques\\ \texttt{.npy}};
+
+        \node (preproc) [block, below of=input, yshift=-0.8cm] {Preprocessing\\ \texttt{preprocessing.py}};
+
+        \node (dataloader) [block, below of=preproc] {Data Loader\\ \texttt{dataset.py}};
+
+        \node (augment) [block, below of=dataloader] {Augmentations\\ \texttt{augmentations.py}};
+
+        \node (train_entry) [entry, below of=augment] {train.py\\ \textit{(Orchestration)}};
+
+        % Models (middle)
+        \node (models) [block, right of=augment, xshift=4.5cm] {Modèles\\ \texttt{models/}};
+
+        % Training Core
+        \node (trainer) [block, right of=train_entry, xshift=4.5cm] {Trainer\\ \texttt{trainer.py}};
+
+        % Evaluation
+        \node (metrics) [block, below of=trainer] {Métriques\\ \texttt{metrics.py}};
+
+        % Checkpoints
+        \node (output) [data, below of=metrics] {Checkpoints\\ \texttt{.pt}};
+
+        % INFERENCE PIPELINE (Right side)
+        \node (predict_entry) [entry, right of=output, xshift=3cm] {predict.py\\ \textit{(Inférence)}};
+
+        \node (inference) [block, above of=predict_entry] {Preprocessing\\ + Inference};
+
+        \node (predictions) [data, above of=inference] {Segmentations\\ \texttt{.csv}};
+
+        % Training pipeline arrows
+        \draw [arrow] (input) -- (preproc);
+        \draw [arrow] (preproc) -- (dataloader);
+        \draw [arrow] (dataloader) -- (augment);
+        \draw [arrow] (augment) -- (train_entry);
+        \draw [arrow] (models) -- (trainer);
+        \draw [arrow] (train_entry) -- (trainer);
+        \draw [arrow] (trainer) -- (metrics);
+        \draw [arrow] (metrics) -- (output);
+
+        % Inference pipeline arrows
+        \draw [arrow] (output) -- (predict_entry);
+        \draw [arrow] (predict_entry) -- (inference);
+        \draw [arrow] (inference) -- (predictions);
+
+    \end{tikzpicture}
+    \caption{Pipeline complet : entraînement (gauche) et inférence (droite)}
+    \label{fig:architecture}
+\end{figure}
+
+Le schéma Figure~\ref{fig:architecture} illustre l'architecture modulaire du projet en deux phases distinctes:
+
+\paragraph{Phase d'entraînement (flux vertical, gauche):}
+Les données brutes (images ultrasonores et masques en format \texttt{.npy}) sont d'abord
+prétraitées via normalisation et interpolation. Elles sont ensuite chargées dans des
+DataLoaders PyTorch avec splits train/validation stratifiés par puits pour éviter
+la fuite de données. Pendant l'entraînement, chaque batch subit des augmentations
+aléatoires (rotations, flips, bruit) pour améliorer la robustesse. Le script
+\textbf{train.py} orchestre l'ensemble du processus, initialisant le modèle,
+l'optimiseur et les hyperparamètres. La boucle d'entraînement dans \textbf{trainer.py}
+effectue à chaque epoch un forward pass, calcule la perte pondérée par classe,
+rétropropage les gradients, et met à jour les poids du réseau. Les métriques
+d'évaluation (IoU par classe) sont calculées en fin de chaque epoch sur l'ensemble
+de validation. Le meilleur modèle est automatiquement sauvegardé en checkpoint
+\texttt{.pt} via Early Stopping dès que la métrique de validation s'améliore.
+
+\paragraph{Phase d'inférence (flux horizontal, droite):}
+Une fois l'entraînement terminé, le script \textbf{predict.py} charger le meilleur
+checkpoint et l'utilise pour générer des prédictions segmentation sur des images test.
+Le preprocessing est réappliqué aux nouvelles images pour garantir la cohérence.
+Les segmentations prédites (cartes de probabilité par classe) sont ensuite formatées
+et exportées en fichiers \texttt{.csv} pour l'évaluation externe.
+
+Cette séparation entre les deux phases assure une distinction claire entre la phase
+de développement et la phase de déploiement, facilitant ainsi la maintenance et
+l'utilisation du modèle en production.
+
+\subsubsection{Description des modules}
+
+\begin{itemize}
+    \item \textbf{preprocessing.py} : Normalisation min-max, interpolation des images manquantes,
+          conversion des masques en format compatible PyTorch.
+
+    \item \textbf{dataset.py} : Chargement des données, création des DataLoaders PyTorch,
+          gestion des splits train/validation avec stratification par puits.
+
+    \item \textbf{augmentations.py} : Implémentation des transformations géométriques
+          (rotations, flips) et du bruit Gaussien appliqués dynamiquement en entraînement.
+
+    \item \textbf{models/} : Définitions des architectures UNet, UNet avec encodeur pré-entraîné,
+          et variantes avec attention mechanisms.
+
+    \item \textbf{trainer.py} : Boucle d'entraînement complète incluant forward pass,
+          calcul de loss, backward propagation, et sauvegarde du meilleur modèle via Early Stopping.
+
+    \item \textbf{metrics.py} : Calcul de l'Intersection over Union (IoU) pour chaque classe
+          et accumulation des métriques moyennes via la classe \texttt{MetricsTracker}.
+          Assure le suivi continu des performances pendant l'entraînement et la validation.
+
+    \item \textbf{train.py} : Point d'entrée principal orchestrant l'entraînement avec
+          arguments en ligne de commande pour configurer le modèle, le dataset et les hyperparamètres.
+
+    \item \textbf{predict.py} : Interface d'inférence permettant de générer des prédictions
+          segmentation sur de nouvelles images.
+\end{itemize}
+
+\subsubsection{Modèle UNet Baseline}
+
+Le modèle UNet \textit{baseline} constitue la référence de ce travail. Son architecture
+suit la structure encodeur-décodeur classique proposée par \cite{Ronneberger2015}, adaptée
+à notre contexte d'images ultrasonores monocanal ($160 \times 160$ pixels).
+
+\textbf{Architecture générale :}
+
+\begin{itemize}
+    \item \textbf{Encodeur} : 4 niveaux de convolution descendante avec max pooling
+    \item \textbf{Goulot d'étranglement (Bottleneck)} : Bloc de convolution au niveau
+          le plus profond
+    \item \textbf{Décodeur} : 4 niveaux de déconvolution ascendante avec skip connections
+    \item \textbf{Skip connections} : Concaténation des activations de l'encodeur aux
+          niveaux correspondants du décodeur, préservant l'information spatiale
+\end{itemize}
+
+\textbf{Blocs constitutifs :}
+
+Chaque niveau de l'encodeur et du décodeur utilise un \texttt{ConvBlock} composé de :
+\[
+    \boxed{\text{Conv2d}(k=3) \to \text{BatchNorm} \to \text{ReLU}} \quad \text{(appliqué 2 fois)}
+\]
+
+Cette structure double-convolution avec normalisation par batch stabilise l'apprentissage
+et améliore la convergence. Le padding de 1 pixel préserve les dimensions spatiales au sein
+de chaque bloc.
+
+\textbf{Dimensions au fil du réseau :}
+
+\begin{table}[H]
+    \centering
+    \small
+    \begin{tabular}{|c|c|c|c|}
+        \hline
+        \textbf{Étape} & \textbf{Entrée} & \textbf{Sortie}            & \textbf{Filtres} \\
+        \hline
+        Input          & -               & $1 \times 160 \times 160$  & -                \\
+        Encoder-1      & $160^2$         & $64 \times 80 \times 80$   & 64               \\
+        Encoder-2      & $80^2$          & $128 \times 40 \times 40$  & 128              \\
+        Encoder-3      & $40^2$          & $256 \times 20 \times 20$  & 256              \\
+        Encoder-4      & $20^2$          & $512 \times 10 \times 10$  & 512              \\
+        Bottleneck     & $10^2$          & $1024 \times 10 \times 10$ & 1024             \\
+        Decoder-1      & $10^2$          & $512 \times 20 \times 20$  & 512              \\
+        Decoder-2      & $20^2$          & $256 \times 40 \times 40$  & 256              \\
+        Decoder-3      & $40^2$          & $128 \times 80 \times 80$  & 128              \\
+        Decoder-4      & $80^2$          & $64 \times 160 \times 160$ & 64               \\
+        Output         & $160^2$         & $3 \times 160 \times 160$  & 3 classes        \\
+        \hline
+    \end{tabular}
+    \caption{Dimensions et nombre de filtres à chaque étape du UNet baseline}
+    \label{tab:unet_dims}
+\end{table}
+
+
+Ce modèle baseline sert de point de comparaison pour les architectures ultérieures
+(avec Dropout, avec Focal Loss, avec transfer learning).
+
+\subsubsection{Modifications ultérieures}
+
+\paragraph{Ajout de Dropout :}
+
+Nous avons
+expérimenté l'ajout de couches de dropout afin de réduire
+le risque de surapprentissage.
+
+Dans cette variante, nous avons intégré du dropout
+(avec probabilité $p = 0.3$) après chaque
+activation ReLU du \texttt{ConvBlock}.
+La motivation sous-jacente reposait sur plusieurs
+considérations théoriques:
+
+\begin{itemize}
+    \item \textbf{Prévention de la co-adaptation} : Le dropout empêche les neurones
+          d'apprendre des dépendances co-adaptées, ce qui peut être particulièrement utile
+          lorsque le dataset est petit (4410 patches seulement).
+
+    \item \textbf{Amélioration de la généralisation} : En encourageant le réseau à
+          apprendre des features redondantes et interprétables, le dropout améliore généralement
+          la capacité de généralisation sur des données non vues.
+
+    \item \textbf{Réduction du surapprentissage} : Avec un dataset réduit et limité à
+          12 puits, le réseau risque naturellement de mémoriser les patterns locaux plutôt
+          que d'apprendre des features généralisables. Le dropout ajoute du bruit stochastique
+          qui agit comme un régulariseur implicite.
+\end{itemize}
+
+Bien que cette approche soit théoriquement solide, les résultats empiriques ont montré
+que l'ajout de dropout au modèle baseline a \textbf{dégradé les performances}. Contrairement
+aux attentes, la désactivation aléatoire de neurones n'a pas conduit à une meilleure généralisation,
+mais a au contraire perturbé la capacité du modèle à apprendre des patterns cohérents.
+Cela peut s'expliquer par plusieurs facteurs : d'une part, le dataset, bien que limité,
+possède une structure suffisamment cohérente (provenant des mêmes 12 puits) pour que la
+couche de dropout introduise une perturbation trop agressive ; d'autre part, d'autres formes
+de régularisation (comme la data augmentation et les poids de classe) suffisaient déjà à
+maîtriser l'overfitting sans nécessiter de bruit supplémentaire. Cette observation souligne
+que certaines techniques de régularisation peuvent être contre-productives lorsqu'appliquées
+naïvement, et qu'une calibration fine est nécessaire en fonction de la complexité du modèle
+et des caractéristiques du dataset.
+
+\paragraph{Ajout de bruit Gaussien dans l'augmentation :}
+
+Parallèlement, nous avons enrichi le pipeline d'augmentation en intégrant du bruit Gaussien
+appliqué dynamiquement pendant l'entraînement. Cette augmentation consiste à ajouter un bruit
+aléatoire (écart-type $\sigma = 0.02$) à chaque image du batch avec une probabilité de 30\%,
+en plus des transformations géométriques existantes (rotations, flips).
+
+La motivation pour cette modification reposait sur plusieurs observations pratiques et théoriques :
+
+\begin{itemize}
+    \item \textbf{Réalisme des données ultrasonores} : Les images ultrasonores acquises
+          in situ contiennent naturellement du bruit d'acquisition dû aux appareils de détection,
+          aux artefacts de propagation, et aux variations du milieu. En exposant le modèle à
+          du bruit synthétique durant l'entraînement, nous le préparons à généraliser sur des
+          images réelles bruyantes.
+
+    \item \textbf{Augmentation sans distorsion sémantique} : Contrairement aux augmentations
+          agressives (déformations élastiques, flou), le bruit Gaussien préserve la structure
+          et les contours des classes de segmentation. Il augmente la variabilité sans détruire
+          l'information pertinente.
+
+    \item \textbf{Robustesse accrue} : Un modèle entraîné sur des données bruyantes devient
+          moins sensible aux petites variations d'acquisition, améliorant potentiellement sa robustesse
+          face à des conditions d'imagerie variables.
+\end{itemize}
+
+Les résultats de cette modification ont révélé un aspect intéressant : l'efficacité du bruit
+Gaussien dépend fortement de l'architecture utilisée. Lorsqu'appliqué au modèle baseline seul,
+l'augmentation par bruit a paradoxalement \textbf{empiré les performances}. Cette dégradation
+peut s'expliquer par le fait que le baseline, sans mécanismes sophistiqués pour filtrer
+ou apprendre les features pertinentes, a du mal à extraire du signal utile lorsque le bruit
+synthétique introduit une variabilité excessive.
+
+Cependant, lorsque le bruit Gaussien a été appliqué à d'autres architectures du projet
+(notamment les variantes avec transfer learning et encodeurs pré-entraînés), l'augmentation
+s'est avérée \textbf{bénéfique}. Les modèles pré-entraînés, disposant déjà de features
+générales robustes apprises sur ImageNet, ont mieux su exploiter le bruit comme régularisateur
+et ont profité de la robustesse accrue qu'il confère.

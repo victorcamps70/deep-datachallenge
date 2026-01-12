@@ -29,9 +29,42 @@ segmentation (Intersection Over Union IOU), afin de fournir
 une estimation fiable et automatisée de la qualité du ciment à
 partir des données ultrasonores.
 
-\subsection{Equipe}
 
-Nous sommes deux alternants en 3e année à
-l'école Centrale de Nantes, en option Informatique
-pour l'intelligence artificielle. Nous avons
-fait la totalité de ce Datachallenge en période entreprise.
+\subsection{Outils utilisés}
+
+Nous avons assuré le suivi de version et la collaboration via l'outil
+\href{https://github.com/}{GitHub}. Le dépôt complet du projet est accessible
+à l'adresse suivante : \href{https://github.com/victorcamps70/deep-datachallenge}
+{victorcamps70/deep-datachallenge}.
+
+L'implémentation a été réalisée en langage Python, en adoptant une architecture
+logicielle modulaire. Cette décomposition structurelle a été conçue pour garantir
+la reproductibilité des expériences et faciliter l'analyse comparative des
+différentes architectures de modèles. Bien que le projet ait été développé
+comme un dépôt logiciel standard, le format de rendu imposé a nécessité une
+adaptation : la structure du projet est détaillée dans le corps du document,
+et l'intégralité des scripts sources a été reportée en annexe du notebook
+pour en assurer l'autonomie d'exécution.
+
+La rédaction de ce rapport a été effectuée sous \LaTeX{}, avec un suivi de
+version intégré au dépôt du code. Par ailleusr, les soumissions sur la plateforme du
+challenge sont identifiées sous le compte \textit{Victor.camps2026}.
+
+Dans un souci de transparence méthodologique, nous mentionnons l'usage
+d'assistants d'intelligence artificielle (modèles Claude Haiku et Gemini-3).
+Ces outils ont été sollicités principalement pour l'assistance au débogage,
+la standardisation de la documentation technique (docstrings) et l'aide à
+la révision stylistique.
+
+\subsection{Métrique de performance}
+
+La métrique utilisée pour évaluer les modèles dans ce
+Datachallenge est
+l'\textbf{Intersection Over Union} (IoU).
+L'IoU est définie mathématiquement comme:
+\[
+    \text{IoU} = \frac{\# X \cap Y}{\# X \cup Y}
+\]
+où $X$ est l’ensemble des pixels prédits avec une classe
+donnée et $Y$ l’ensemble des pixels avec
+cette classe dans la Ground Truth.

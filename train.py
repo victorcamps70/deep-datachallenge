@@ -67,7 +67,7 @@ def train_model(
         train_loader,
         val_loader,
         epochs=epochs,
-        early_stopping_patience=20,
+        early_stopping_patience=10,
         save_dir=save_dir,
         model_name=model_name,
         resume=resume,
