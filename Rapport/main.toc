@@ -3,20 +3,28 @@
 \contentsline {subsection}{\numberline {1.1}Contexte}{1}{subsection.1.1}%
 \contentsline {subsection}{\numberline {1.2}Outils utilisés}{1}{subsection.1.2}%
 \contentsline {subsection}{\numberline {1.3}Métrique de performance}{1}{subsection.1.3}%
-\contentsline {section}{\numberline {2}Exploration des données}{2}{section.2}%
-\contentsline {subsection}{\numberline {2.1}Format des données}{2}{subsection.2.1}%
-\contentsline {subsection}{\numberline {2.2}Distribution et déséquilibre des données}{2}{subsection.2.2}%
-\contentsline {subsection}{\numberline {2.3}Pipeline de prétraitement et justification des techniques}{3}{subsection.2.3}%
-\contentsline {section}{\numberline {3}Construction du modèle de référence}{4}{section.3}%
-\contentsline {subsection}{\numberline {3.1}Motivations}{4}{subsection.3.1}%
-\contentsline {subsection}{\numberline {3.2}Architecture générale}{4}{subsection.3.2}%
-\contentsline {subsubsection}{\numberline {3.2.1}Structure du projet}{4}{subsubsection.3.2.1}%
-\contentsline {paragraph}{Phase d'entraînement (flux vertical, gauche):}{5}{section*.5}%
-\contentsline {paragraph}{Phase d'inférence (flux horizontal, droite):}{5}{section*.6}%
-\contentsline {subsubsection}{\numberline {3.2.2}Description des modules}{6}{subsubsection.3.2.2}%
-\contentsline {subsubsection}{\numberline {3.2.3}Modèle UNet Baseline}{6}{subsubsection.3.2.3}%
-\contentsline {subsubsection}{\numberline {3.2.4}Modifications ultérieures}{7}{subsubsection.3.2.4}%
-\contentsline {paragraph}{Ajout de Dropout :}{7}{section*.8}%
-\contentsline {paragraph}{Ajout de bruit Gaussien dans l'augmentation :}{8}{section*.9}%
-\contentsline {section}{\numberline {4}Premier modèle}{8}{section.4}%
+\contentsline {section}{\numberline {2}Exploration des données}{1}{section.2}%
+\contentsline {subsection}{\numberline {2.1}Format des données}{1}{subsection.2.1}%
+\contentsline {subsection}{\numberline {2.2}Distribution et déséquilibre des données}{1}{subsection.2.2}%
+\contentsline {subsection}{\numberline {2.3}Pipeline de prétraitement et justification des techniques}{2}{subsection.2.3}%
+\contentsline {section}{\numberline {3}Construction du modèle de référence}{3}{section.3}%
+\contentsline {subsection}{\numberline {3.1}Motivations}{3}{subsection.3.1}%
+\contentsline {subsection}{\numberline {3.2}Architecture générale}{3}{subsection.3.2}%
+\contentsline {subsubsection}{\numberline {3.2.1}Structure du projet}{3}{subsubsection.3.2.1}%
+\contentsline {paragraph}{Phase d'entraînement :}{3}{section*.5}%
+\contentsline {paragraph}{Phase d'inférence :}{3}{section*.6}%
+\contentsline {subsubsection}{\numberline {3.2.2}Description des modules}{4}{subsubsection.3.2.2}%
+\contentsline {subsubsection}{\numberline {3.2.3}Modèle UNet Baseline}{4}{subsubsection.3.2.3}%
+\contentsline {subsubsection}{\numberline {3.2.4}Modifications ultérieures}{5}{subsubsection.3.2.4}%
+\contentsline {paragraph}{Ajout de Dropout :}{5}{section*.7}%
+\contentsline {paragraph}{Ajout de bruit Gaussien dans l'augmentation :}{5}{section*.8}%
+\contentsline {paragraph}{Exploration de fonctions de perte alternatives :}{5}{section*.9}%
+\contentsline {paragraph}{Intégration d'Attention Gates :}{5}{section*.10}%
+\contentsline {paragraph}{Utilisation d'encodeurs pré-entraînés (Transfer Learning) :}{6}{section*.11}%
+\contentsline {section}{\numberline {4}Résultats}{6}{section.4}%
+\contentsline {subsection}{\numberline {4.1}Métriques principales}{6}{subsection.4.1}%
+\contentsline {subsection}{\numberline {4.2}Evolution des différentes métriques}{7}{subsection.4.2}%
+\contentsline {subsection}{\numberline {4.3}Comparatif des métriques entre modèles}{8}{subsection.4.3}%
 \contentsline {section}{\numberline {5}Conclusion}{8}{section.5}%
+\contentsline {subsection}{\numberline {5.1}Résumé des travaux réalisés}{8}{subsection.5.1}%
+\contentsline {subsection}{\numberline {5.2}Conclusion et résultats}{9}{subsection.5.2}%

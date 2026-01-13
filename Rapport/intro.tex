@@ -2,59 +2,12 @@
 
 \subsection{Contexte}
 
-Les données étudiées dans ce travail sont
-constituées d’images ultrasonores acquises
-lors d’inspections de puits, représentant des
-coupes radiales du tubage, du ciment et de
-la formation environnante. Ces images,
-caractérisées par une forte variabilité
-spatiale et un niveau de bruit significatif,
-contiennent une information indirecte mais
-essentielle sur l’état du ciment, dont
-la qualité conditionne l’intégrité mécanique
-et la sécurité du puits. L’enjeu est d’exploiter
-ces données pour identifier automatiquement,
-au niveau du pixel, des interfaces physiques
-clés, en particulier la troisième interface
-d’écho entre le ciment et la formation géologique.
-Le problème est formulé comme une tâche de
-segmentation supervisée d’images, dans laquelle
-un modèle d’apprentissage automatique doit apprendre
-à associer à chaque pixel une classe correspondant
-à une structure physique donnée. L’objectif de ce
-travail est ainsi de concevoir un pipeline de détection
-des segmentations, robuste et généralisable,
-évaluée à l’aide de métriques standard de
-segmentation (Intersection Over Union IOU), afin de fournir
-une estimation fiable et automatisée de la qualité du ciment à
-partir des données ultrasonores.
+Ce travail porte sur l'analyse d'images ultrasonores issues d'inspections de puits, offrant des coupes radiales du complexe tubage-ciment-formation. Ces données, caractérisées par une forte variabilité et un bruit important, sont cruciales pour évaluer l'intégrité du ciment, garante de la sécurité des ouvrages. L'enjeu technique réside dans l'identification automatique, à l'échelle du pixel, des interfaces acoustiques, et particulièrement de la jonction ciment-formation (troisième interface). Formulée comme une tâche de segmentation supervisée, cette étude vise à concevoir un pipeline robuste, évalué par l'Intersection over Union (IoU), pour automatiser la qualification de la cimentation.
 
 
 \subsection{Outils utilisés}
 
-Nous avons assuré le suivi de version et la collaboration via l'outil
-\href{https://github.com/}{GitHub}. Le dépôt complet du projet est accessible
-à l'adresse suivante : \href{https://github.com/victorcamps70/deep-datachallenge}
-{victorcamps70/deep-datachallenge}.
-
-L'implémentation a été réalisée en langage Python, en adoptant une architecture
-logicielle modulaire. Cette décomposition structurelle a été conçue pour garantir
-la reproductibilité des expériences et faciliter l'analyse comparative des
-différentes architectures de modèles. Bien que le projet ait été développé
-comme un dépôt logiciel standard, le format de rendu imposé a nécessité une
-adaptation : la structure du projet est détaillée dans le corps du document,
-et l'intégralité des scripts sources a été reportée en annexe du notebook
-pour en assurer l'autonomie d'exécution.
-
-La rédaction de ce rapport a été effectuée sous \LaTeX{}, avec un suivi de
-version intégré au dépôt du code. Par ailleusr, les soumissions sur la plateforme du
-challenge sont identifiées sous le compte \textit{Victor.camps2026}.
-
-Dans un souci de transparence méthodologique, nous mentionnons l'usage
-d'assistants d'intelligence artificielle (modèles Claude Haiku et Gemini-3).
-Ces outils ont été sollicités principalement pour l'assistance au débogage,
-la standardisation de la documentation technique (docstrings) et l'aide à
-la révision stylistique.
+La gestion du projet est assurée via GitHub (\href{https://github.com/victorcamps70/deep-datachallenge}{dépôt}) sous forme d'une architecture modulaire python. L'implémentation privilégie la reproductibilité, mais par respect des consignes, l'intégration du code source a été fait en annexe du notebook. Nous préconisons quand même de regarder plutôt le dépôt qui sera plus lisible. Les soumissions au challenge sont effectuées sous l'identifiant \textit{Victor.camps2026}. Par transparence méthodologique, nous signalons l'usage d'assistants IA (Claude Haiku, Gemini-3) pour le codage et la révision de ce rapport.
 
 \subsection{Métrique de performance}
 
