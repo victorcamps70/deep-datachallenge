@@ -33,6 +33,7 @@ def train_model(
     save_dir=None,
     resume=False,
     loss_type="crossentropy",
+    checkpoint_path=None,
 ):
     """
     Entraîner un modèle
@@ -48,6 +49,7 @@ def train_model(
         save_dir: Répertoire pour sauvegarder
         resume (bool): Si True, reprendre depuis un checkpoint
         loss_type (str): Type de loss ('crossentropy', 'focal', 'dice', 'combined')
+        checkpoint_path (str): Chemin vers un checkpoint à charger avant entraînement
 
     Returns:
         dict: Résultats et historique
@@ -55,8 +57,10 @@ def train_model(
 
     print(f"\n{'='*70}")
     print(f"ENTRAÎNEMENT: {model_name}")
-    if resume:
+    if resume or checkpoint_path:
         print("MODE: REPRISE D'ENTRAÎNEMENT")
+    if checkpoint_path:
+        print(f"Chargement checkpoint: {checkpoint_path}")
     loss_names = {
         "crossentropy": "CrossEntropyLoss",
         "focal": "Focal Loss (gamma=2.0)",
@@ -69,6 +73,16 @@ def train_model(
     trainer = SegmentationTrainer(
         model, device, lr=lr, class_weights=class_weights, loss_type=loss_type
     )
+
+    # Charger un checkpoint avant entraînement si fourni
+    if checkpoint_path:
+        checkpoint_path = Path(checkpoint_path)
+        if checkpoint_path.exists():
+            checkpoint = torch.load(checkpoint_path, map_location=device)
+            model.load_state_dict(checkpoint)
+            print(f"✓ Checkpoint chargé: {checkpoint_path}\n")
+        else:
+            print(f"⚠ Checkpoint non trouvé: {checkpoint_path}\n")
 
     history = trainer.fit(
         train_loader,
@@ -102,6 +116,12 @@ def main():
     parser.add_argument("--batch-size", type=int, default=32, help="Batch size (défaut: 32)")
     parser.add_argument("--lr", type=float, default=1e-3, help="Learning rate (défaut: 1e-3)")
     parser.add_argument("--resume", action="store_true", help="Reprendre depuis un checkpoint")
+    parser.add_argument(
+        "--checkpoint-path",
+        type=str,
+        default=None,
+        help="Chemin vers un checkpoint à charger (ex: checkpoints/unet_pretrained_resnet34_frozen_best.pt)",
+    )
     parser.add_argument(
         "--loss",
         type=str,
@@ -139,6 +159,7 @@ def main():
     LR = args.lr
     SAVE_DIR = Path("checkpoints")
     RESUME = args.resume
+    CHECKPOINT_PATH = args.checkpoint_path
     LOSS_TYPE = args.loss if args.loss else ("focal" if args.focal else "crossentropy")
     USE_PRETRAINED = args.pretrained
     ENCODER_NAME = args.encoder
@@ -163,8 +184,13 @@ def main():
         print(f"Encoder frozen: {FREEZE_ENCODER}")
     else:
         print("Model: Custom UNet (no pretraining)")
+    if CHECKPOINT_PATH:
+        print(f"Checkpoint to load: {CHECKPOINT_PATH}")
     print(f"Save directory: {SAVE_DIR}")
-    print(f"Mode: {'REPRISE' if RESUME else 'NOUVEAU'}\n")
+    print(f"Mode: {'REPRISE' if RESUME else 'NOUVEAU'}")
+    if CHECKPOINT_PATH:
+        print(f"(Chargement depuis: {CHECKPOINT_PATH})")
+    print()
 
     # Créer le répertoire de sauvegarde
     SAVE_DIR.mkdir(parents=True, exist_ok=True)
@@ -228,6 +254,7 @@ def main():
         save_dir=SAVE_DIR,
         resume=RESUME,
         loss_type=LOSS_TYPE,
+        checkpoint_path=CHECKPOINT_PATH,
     )
 
     # Afficher la comparaison
