@@ -12,7 +12,7 @@ class FocalLoss(nn.Module):
     Focal Loss pour l'apprentissage avec déséquilibre de classes
 
     La Focal Loss est idéale pour les problèmes où:
-    - Les classes sont très déséquilibrées (ex: TIE = 5.81% vs Background = 63%)
+    - Les classes sont très déséquilibrées (ex: TIE = 5.81% vs Background = 85%)
     - Il y a beaucoup d'exemples faciles et peu d'exemples difficiles
 
     Elle pénalise davantage les prédictions incorrectes (hard negatives) et
@@ -92,25 +92,103 @@ class FocalLoss(nn.Module):
             return focal_loss
 
 
-class CombinedLoss(nn.Module):
+class DiceLoss(nn.Module):
     """
-    Loss combinée: Focal Loss + Dice Loss
-    Utile pour augmenter la robustesse
+    Dice Loss pour la segmentation multi-classe
+
+    La Dice Loss est complémentaire à la Cross-Entropy:
+    - Cross-Entropy: optimise la probabilité de la classe correcte
+    - Dice Loss: optimise l'overlap entre prédiction et ground truth (IoU-like)
+
+    Utile pour les segmentations avec déséquilibre spatial
 
     Args:
-        alpha (list): Poids des classes pour Focal Loss
-        gamma (float): Facteur de concentration pour Focal Loss
-        focal_weight (float): Poids de Focal Loss dans la combinaison
+        smooth (float): Constant de lissage pour éviter division par zéro
+        reduction (str): 'mean' ou 'none'
+    """
+
+    def __init__(self, smooth=1.0, reduction="mean"):
+        super(DiceLoss, self).__init__()
+        self.smooth = smooth
+        self.reduction = reduction
+
+    def forward(self, inputs, targets):
+        """
+        Calculer la Dice Loss
+
+        Args:
+            inputs (torch.Tensor): Logits du modèle, shape [N, C, H, W]
+            targets (torch.Tensor): Labels de classe, shape [N, H, W]
+
+        Returns:
+            torch.Tensor: Loss scalaire
+        """
+        # Convertir logits en probabilités
+        inputs = F.softmax(inputs, dim=1)
+
+        # One-hot encode les targets
+        N, C, H, W = inputs.shape
+        targets_one_hot = F.one_hot(targets, num_classes=C).permute(0, 3, 1, 2).float()
+
+        # Calculer Dice pour chaque classe
+        dice_per_class = []
+
+        for c in range(C):
+            input_c = inputs[:, c, :, :]  # [N, H, W]
+            target_c = targets_one_hot[:, c, :, :]  # [N, H, W]
+
+            # Intersection et Union
+            intersection = (input_c * target_c).sum()
+            union = input_c.sum() + target_c.sum()
+
+            # Dice coefficient
+            dice = (2 * intersection + self.smooth) / (union + self.smooth)
+            dice_per_class.append(dice)
+
+        # Loss = 1 - Dice (on veut maximiser Dice, donc minimiser 1-Dice)
+        dice_loss = 1 - torch.stack(dice_per_class).mean()
+
+        return dice_loss
+
+
+class CombinedLoss(nn.Module):
+    """
+    Loss combinée: Cross-Entropy + Dice Loss
+    Combine l'optimisation au niveau pixel (CE) et l'overlap (Dice)
+
+    Cette combinaison s'avère robuste et complémentaire:
+    - Cross-Entropy: pénalise les erreurs de classification pixel-par-pixel
+    - Dice Loss: pénalise le manque d'overlap global entre régions
+
+    Args:
+        class_weights (list): Poids des classes pour Cross-Entropy
+        ce_weight (float): Poids de Cross-Entropy dans la combinaison
         dice_weight (float): Poids de Dice Loss dans la combinaison
     """
 
-    def __init__(self, alpha=None, gamma=2.0, focal_weight=1.0, dice_weight=0.5):
+    def __init__(self, class_weights=None, ce_weight=1.0, dice_weight=0.5):
         super(CombinedLoss, self).__init__()
-        self.focal_loss = FocalLoss(alpha=alpha, gamma=gamma)
-        self.focal_weight = focal_weight
+        self.ce_loss = nn.CrossEntropyLoss(
+            weight=class_weights if class_weights is not None else None
+        )
+        self.dice_loss = DiceLoss()
+        self.ce_weight = ce_weight
         self.dice_weight = dice_weight
 
     def forward(self, inputs, targets):
-        focal = self.focal_loss(inputs, targets)
-        # Dice Loss peut être ajouté ici si nécessaire
-        return self.focal_weight * focal
+        """
+        Calculer la perte combinée
+
+        Args:
+            inputs (torch.Tensor): Logits du modèle, shape [N, C, H, W]
+            targets (torch.Tensor): Labels de classe, shape [N, H, W]
+
+        Returns:
+            torch.Tensor: Loss combinée = ce_weight*CE + dice_weight*Dice
+        """
+        ce = self.ce_loss(inputs, targets)
+        dice = self.dice_loss(inputs, targets)
+
+        combined = self.ce_weight * ce + self.dice_weight * dice
+
+        return combined
