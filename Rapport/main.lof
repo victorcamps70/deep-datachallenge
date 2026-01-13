@@ -1,7 +1,0 @@
-\babel@toc {french}{}\relax 
-\contentsline {figure}{\numberline {1}{\ignorespaces Distribution des classes dans le dataset}}{2}{figure.caption.2}%
-\contentsline {figure}{\numberline {2}{\ignorespaces Pipeline complet de prétraitement : Original $\rightarrow $ Redimensionné $\rightarrow $ Normalisé}}{2}{figure.caption.3}%
-\contentsline {figure}{\numberline {3}{\ignorespaces Pipeline complet : entraînement (gauche) et inférence (droite)}}{3}{figure.caption.4}%
-\contentsline {figure}{\numberline {4}{\ignorespaces Comparaison des IoU entre tous les modèles}}{7}{figure.caption.13}%
-\contentsline {figure}{\numberline {5}{\ignorespaces Comparaison des Loss entre tous les modèles}}{7}{figure.caption.14}%
-\contentsline {figure}{\numberline {6}{\ignorespaces Comparatif des métriques entre tous les modèles}}{8}{figure.caption.15}%
